@@ -3,7 +3,27 @@
 [![CI](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml/badge.svg)](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml)
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.9.0`.
-В Terraform Registry не опубликована. Поддерживаются источник данных `tatnet_image` и минимальный ресурс `tatnet_vm`.
+Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
+Поддерживаются источник данных `tatnet_image` и минимальный ресурс `tatnet_vm`.
+
+## Установка из Registry
+
+```hcl
+terraform {
+  required_providers {
+    tatnet = {
+      source  = "tatnet-ru/tatnet"
+      version = "0.1.0"
+    }
+  }
+}
+
+provider "tatnet" {}
+```
+
+Передайте API-ключ через `TATNET_API_KEY`, затем выполните `terraform init`.
+Релиз подписан ключом `F1A4B97D33F29CC5`. Сохраните `.terraform.lock.hcl`
+в репозитории своей инфраструктуры.
 
 ## Чтение образа
 
@@ -47,8 +67,8 @@ cd examples/image
 terraform plan -var='project_id=UUID_ПРОЕКТА' -var='cluster_id=UUID_РЕГИОНА'
 ```
 
-Для dev_overrides не запускайте `terraform init`: провайдер ещё не опубликован
-в Registry. Не сохраняйте ключ в HCL, tfvars или Git. `api_key` помечен Sensitive;
+При использовании dev_overrides запускайте `plan` напрямую: `terraform init`
+устанавливает опубликованный релиз из Registry. Не сохраняйте ключ в HCL, tfvars или Git. `api_key` помечен Sensitive;
 по умолчанию берётся из `TATNET_API_KEY`. `endpoint` необязателен и по умолчанию
 равен `https://api.tatnet.ru/v1`; разрешён HTTPS, редиректы не выполняются,
 таймаут запроса 30 секунд. Тело ошибочного ответа API не попадает в диагностику.
