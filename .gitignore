@@ -1,0 +1,12 @@
+/bin/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+crash.log
+/.local/
+*.tfvars.json
+.env
+.env.*
+*.log

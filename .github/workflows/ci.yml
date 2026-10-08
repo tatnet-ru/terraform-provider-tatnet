@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build, test and validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+        with:
+          terraform_version: 1.14.7
+          terraform_wrapper: false
+      - name: Formatting
+        run: |
+          test -z "$(gofmt -l .)"
+          terraform fmt -check -recursive examples
+      - name: Build and verify
+        run: |
+          go mod verify
+          go build ./...
+          go vet ./...
+          go test -race ./...
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Validate Terraform examples
+        env:
+          CHECKPOINT_DISABLE: '1'
+        run: |
+          go build -o "$RUNNER_TEMP/plugins/terraform-provider-tatnet" .
+          cat > "$RUNNER_TEMP/terraform.rc" <<EOFRC
+          provider_installation {
+            dev_overrides {
+              "tatnet-ru/tatnet" = "$RUNNER_TEMP/plugins"
+            }
+            direct {}
+          }
+          EOFRC
+          export TF_CLI_CONFIG_FILE="$RUNNER_TEMP/terraform.rc"
+          terraform -chdir=examples/image validate -no-color
+          terraform -chdir=examples/vm validate -no-color
