@@ -114,7 +114,8 @@ terraform fmt -check -recursive examples
 ```
 
 Не коммитьте API-ключи, Terraform state/plan, tfvars и локальные логи.
-Для будущего релиза нужны версионирование, сборки и публикация в Registry.
+Подготовка релизов описана в [RELEASING.md](RELEASING.md).
+Документация для Registry находится в [docs](docs/index.md).
 
 ## Лицензия
 

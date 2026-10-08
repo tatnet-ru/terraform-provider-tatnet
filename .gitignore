@@ -10,3 +10,4 @@ crash.log
 .env
 .env.*
 *.log
+/dist/

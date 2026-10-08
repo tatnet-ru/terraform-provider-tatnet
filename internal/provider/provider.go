@@ -16,16 +16,20 @@ import (
 	"github.com/tatnet-ru/tatnet-go/tatnet"
 )
 
-type Provider struct{}
+type Provider struct{ version string }
 type providerModel struct {
 	APIKey   types.String `tfsdk:"api_key"`
 	Endpoint types.String `tfsdk:"endpoint"`
 }
 
-func New() provider.Provider { return &Provider{} }
-func (*Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
+func New() provider.Provider { return &Provider{version: "dev"} }
+
+func NewWithVersion(version string) func() provider.Provider {
+	return func() provider.Provider { return &Provider{version: version} }
+}
+func (p *Provider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "tatnet"
-	resp.Version = "dev"
+	resp.Version = p.version
 }
 func (*Provider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{Attributes: map[string]schema.Attribute{

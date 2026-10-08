@@ -7,8 +7,10 @@ import (
 	"log"
 )
 
+var version = "dev"
+
 func main() {
-	if err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{Address: "registry.terraform.io/tatnet-ru/tatnet"}); err != nil {
+	if err := providerserver.Serve(context.Background(), provider.NewWithVersion(version), providerserver.ServeOpts{Address: "registry.terraform.io/tatnet-ru/tatnet"}); err != nil {
 		log.Fatal(err)
 	}
 }

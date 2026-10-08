@@ -67,3 +67,11 @@ func TestProviderConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestReleaseVersion(t *testing.T) {
+	var resp provider.MetadataResponse
+	NewWithVersion("0.1.0")().Metadata(context.Background(), provider.MetadataRequest{}, &resp)
+	if resp.Version != "0.1.0" {
+		t.Fatalf("incorrect release version: %q", resp.Version)
+	}
+}
