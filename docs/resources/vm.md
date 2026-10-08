@@ -8,7 +8,7 @@ description: |-
 
 Creates a prepaid VM using the CPU, memory and disk defaults of an existing
 plan. One DHCP interface is attached to the specified VPC. No public IP is
-allocated. Creation charges account funds for the selected period.
+allocated by the VM resource; use `tatnet_floating_ip` for a separate address. Creation charges account funds for the selected period.
 
 ## Example Usage
 
@@ -50,6 +50,7 @@ All input changes require replacement, including billing settings and name.
 
 - `id` (String) VM UUID.
 - `status` (String) Observed VM lifecycle status. Stopped VMs are not automatically started.
+- `primary_interface_id` (String) UUID of the sole interface matching `vpc_id`, for `tatnet_floating_ip.vm_interface_id`. Null if the API reports no matching interface or more than one.
 - `ipv4_addresses` (List of String) Observed IPv4 addresses, potentially in CIDR notation.
 
 ## Lifecycle and errors

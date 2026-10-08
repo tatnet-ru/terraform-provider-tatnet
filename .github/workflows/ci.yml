@@ -57,3 +57,4 @@ jobs:
           export TF_CLI_CONFIG_FILE="$RUNNER_TEMP/terraform.rc"
           terraform -chdir=examples/image validate -no-color
           terraform -chdir=examples/vm validate -no-color
+          terraform -chdir=examples/floating-ip validate -no-color

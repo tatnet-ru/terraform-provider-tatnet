@@ -25,6 +25,9 @@ func TestProtocolSchema(t *testing.T) {
 	if response.DataSourceSchemas["tatnet_image"] == nil {
 		t.Fatal("image data source not registered")
 	}
+	if response.ResourceSchemas["tatnet_floating_ip"] == nil {
+		t.Fatal("floating IP resource not registered")
+	}
 	if response.ResourceSchemas["tatnet_vm"] == nil {
 		t.Fatal("VM resource not registered")
 	}
@@ -70,8 +73,8 @@ func TestProviderConfiguration(t *testing.T) {
 
 func TestReleaseVersion(t *testing.T) {
 	var resp provider.MetadataResponse
-	NewWithVersion("0.1.0")().Metadata(context.Background(), provider.MetadataRequest{}, &resp)
-	if resp.Version != "0.1.0" {
+	NewWithVersion("0.2.0")().Metadata(context.Background(), provider.MetadataRequest{}, &resp)
+	if resp.Version != "0.2.0" {
 		t.Fatalf("incorrect release version: %q", resp.Version)
 	}
 }

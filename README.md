@@ -4,7 +4,7 @@
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.9.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Поддерживаются источник данных `tatnet_image` и минимальный ресурс `tatnet_vm`.
+Версия 0.2.0 поддерживает `tatnet_image`, `tatnet_vm` и `tatnet_floating_ip`.
 
 ## Установка из Registry
 
@@ -13,7 +13,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.1.0"
+      version = "0.2.0"
     }
   }
 }
@@ -84,7 +84,7 @@ terraform plan -var='project_id=UUID_ПРОЕКТА' -var='cluster_id=UUID_РЕ�
 Основа: [официальная документация Framework](https://developer.hashicorp.com/terraform/plugin/framework/data-sources).
 
 CI запускает Go build/vet/test с race detector, проверяет форматирование,
-зависимости и `terraform validate` для обоих примеров. CI не требует ключа TatNet
+зависимости и `terraform validate` для всех примеров. CI не требует ключа TatNet
 и не создаёт облачные ресурсы. Используется Terraform 1.14.7 и Go из go.mod.
 
 ## Минимальный ресурс tatnet_vm
@@ -107,7 +107,8 @@ HTTP 403/500 при чтении не удаляют ресурс из state. Re
 
 Любое изменение входных параметров требует замены ВМ (включая image_id).
 Диски при замене не сохраняются. In-place update, import, resize, cloud-init,
-публичные IP и управление питанием в этот небольшой шаг не включены.
+и управление питанием в ресурс VM не включены. Публичный IP управляется
+отдельным ресурсом `tatnet_floating_ip` начиная с версии 0.2.0.
 Перед использованием на постоянных данных добавьте lifecycle.prevent_destroy.
 В API нет идемпотентного токена создания: POST не повторяется автоматически;
 при сетевой ошибке создания проверьте проект, прежде чем повторять apply.
@@ -140,3 +141,17 @@ terraform fmt -check -recursive examples
 ## Лицензия
 
 Apache-2.0; см. [LICENSE](LICENSE).
+
+## Floating IP (с версии 0.2.0)
+
+`tatnet_floating_ip` выделяет адрес в регионе и опционально привязывает его
+к `tatnet_vm.example.primary_interface_id`. Имя и интерфейс меняются без
+перевыделения адреса; смена региона требует замены. При удалении ресурс
+дожидается открепления, затем освобождает IP. Адрес оплачивается и без ВМ,
+пока не освобождён. Нужны `floating_ip:read` и `floating_ip:write`.
+
+Существующий адрес можно импортировать по UUID без переподключения. Укажите
+его текущие имя, регион и интерфейс в конфигурации, затем проверьте plan.
+VPC NAT и адреса с `auto_release=true` этим ресурсом не управляются.
+Пример: [examples/floating-ip](examples/floating-ip/main.tf).
+[Схема и обработка ошибок](docs/resources/floating_ip.md).

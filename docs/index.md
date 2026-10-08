@@ -7,7 +7,7 @@ description: |-
 # TatNet Provider
 
 The TatNet provider manages virtual machines through the public TatNet API.
-This initial release supports `tatnet_image` and `tatnet_vm`.
+Version 0.2.0 supports `tatnet_image`, `tatnet_vm` and `tatnet_floating_ip`.
 
 ## Example Usage
 
@@ -16,7 +16,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "~> 0.1.0"
+      version = "~> 0.2.0"
     }
   }
 }
@@ -38,8 +38,11 @@ must have billing management permission to create a paid VM.
   URLs with embedded credentials, query parameters or fragments are rejected.
   Redirects are not followed. Requests time out after 30 seconds.
 
-## Initial release limitations
+Floating IP management requires account-scoped `floating_ip:read` and
+`floating_ip:write` permissions. Addresses remain billed until released.
+
+## VM limitations
 
 VM input changes require replacement. Import, in-place updates, custom sizing,
-cloud-init, public IP management and power actions are not implemented.
+cloud-init and power actions are not implemented.
 Read the VM resource documentation before using persistent workloads.

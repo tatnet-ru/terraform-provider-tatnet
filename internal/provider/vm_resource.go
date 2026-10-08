@@ -24,6 +24,7 @@ type vmResource struct {
 }
 type vmModel struct {
 	ID          types.String `tfsdk:"id"`
+	InterfaceID types.String `tfsdk:"primary_interface_id"`
 	ProjectID   types.String `tfsdk:"project_id"`
 	ClusterID   types.String `tfsdk:"cluster_id"`
 	ImageID     types.String `tfsdk:"image_id"`
@@ -56,11 +57,12 @@ func (*vmResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 		"id":         schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"project_id": required("Project UUID."), "cluster_id": required("Region UUID."), "image_id": required("Accessible image UUID deployed in the region."), "vm_plan_id": required("VM tariff/plan UUID; CPU, memory and disk use plan defaults."),
 		"name": required("VM display name."), "hostname": required("VM hostname."), "default_user": required("SSH login user."), "vpc_id": required("Existing VPC UUID in the target region. No public IP is allocated."),
-		"ssh_key_ids":    schema.SetAttribute{Required: true, ElementType: types.StringType, Description: "At least one existing SSH key UUID.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}},
-		"period_days":    schema.Int64Attribute{Required: true, Description: "Initial prepaid period in days. Creation charges account funds.", PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}},
-		"auto_renew":     schema.BoolAttribute{Required: true, Description: "Whether the paid subscription renews automatically.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
-		"status":         schema.StringAttribute{Computed: true, Description: "Observed VM lifecycle status; stopped VMs are not started automatically."},
-		"ipv4_addresses": schema.ListAttribute{Computed: true, ElementType: types.StringType, Description: "Observed IPv4 addresses."},
+		"ssh_key_ids":          schema.SetAttribute{Required: true, ElementType: types.StringType, Description: "At least one existing SSH key UUID.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}},
+		"period_days":          schema.Int64Attribute{Required: true, Description: "Initial prepaid period in days. Creation charges account funds.", PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}},
+		"auto_renew":           schema.BoolAttribute{Required: true, Description: "Whether the paid subscription renews automatically.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
+		"status":               schema.StringAttribute{Computed: true, Description: "Observed VM lifecycle status; stopped VMs are not started automatically."},
+		"primary_interface_id": schema.StringAttribute{Computed: true, Description: "UUID of the sole interface in the configured VPC, suitable for tatnet_floating_ip.vm_interface_id. Null when missing or ambiguous."},
+		"ipv4_addresses":       schema.ListAttribute{Computed: true, ElementType: types.StringType, Description: "Observed IPv4 addresses."},
 	}}
 }
 func (*vmResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
@@ -199,6 +201,18 @@ func (r *vmResource) Delete(ctx context.Context, req resource.DeleteRequest, res
 }
 func (m *vmModel) observe(ctx context.Context, vm *tatnet.V1VM, diags *diag.Diagnostics, refresh bool) {
 	m.Status = types.StringValue(vm.Status)
+	m.InterfaceID = types.StringNull()
+	if vm.Interfaces != nil {
+		matches := []string{}
+		for _, iface := range *vm.Interfaces {
+			if iface.VpcId != nil && *iface.VpcId == m.VPCID.ValueString() && iface.Id != "" {
+				matches = append(matches, iface.Id)
+			}
+		}
+		if len(matches) == 1 {
+			m.InterfaceID = types.StringValue(matches[0])
+		}
+	}
 	ips := []string{}
 	if vm.Ipv4Addresses != nil {
 		ips = *vm.Ipv4Addresses

@@ -234,3 +234,31 @@ func TestVMPlanRequiresReplacement(t *testing.T) {
 		t.Fatal("image change must require replacement")
 	}
 }
+
+func TestVMPrimaryInterface(t *testing.T) {
+	for _, tc := range []struct{ name, interfaces, want string }{
+		{"single matching VPC", `[{"id":"nic-a","vpc_id":"vpc-a"}]`, "nic-a"},
+		{"ignore unrelated VPC", `[{"id":"nic-b","vpc_id":"vpc-b"},{"id":"nic-a","vpc_id":"vpc-a"}]`, "nic-a"},
+		{"missing", `[]`, ""},
+		{"ambiguous", `[{"id":"nic-a","vpc_id":"vpc-a"},{"id":"nic-b","vpc_id":"vpc-a"}]`, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r, _, state := vmHarness(t, func(w http.ResponseWriter, q *http.Request) {
+				body := strings.TrimSuffix(vmJSON("active"), "}") + `,"interfaces":` + tc.interfaces + `}`
+				_, _ = w.Write([]byte(body))
+			})
+			resp := resource.ReadResponse{State: state}
+			r.Read(context.Background(), resource.ReadRequest{State: state}, &resp)
+			if resp.Diagnostics.HasError() {
+				t.Fatal(resp.Diagnostics)
+			}
+			var m vmModel
+			if d := resp.State.Get(context.Background(), &m); d.HasError() {
+				t.Fatal(d)
+			}
+			if m.InterfaceID.ValueString() != tc.want || m.InterfaceID.IsNull() != (tc.want == "") {
+				t.Fatal("incorrect interface selection", m.InterfaceID)
+			}
+		})
+	}
+}
