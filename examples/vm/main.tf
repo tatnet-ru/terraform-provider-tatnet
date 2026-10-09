@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     tatnet = {
-      source = "tatnet-ru/tatnet"
+      source  = "tatnet-ru/tatnet"
+      version = "~> 0.3.0"
     }
   }
 }
@@ -31,12 +32,23 @@ data "tatnet_image" "debian" {
   version    = "13"
 }
 
+data "tatnet_vpc" "existing" {
+  id = var.vpc_id
+
+  lifecycle {
+    postcondition {
+      condition     = self.cluster_id == var.cluster_id
+      error_message = "The VPC must belong to the selected VM region."
+    }
+  }
+}
+
 resource "tatnet_vm" "example" {
   project_id   = var.project_id
   cluster_id   = var.cluster_id
   vm_plan_id   = var.vm_plan_id
   image_id     = data.tatnet_image.debian.id
-  vpc_id       = var.vpc_id
+  vpc_id       = data.tatnet_vpc.existing.id
   name         = "terraform-example"
   hostname     = "terraform-example"
   default_user = "debian"

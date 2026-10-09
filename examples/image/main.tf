@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     tatnet = {
-      source = "tatnet-ru/tatnet"
+      source  = "tatnet-ru/tatnet"
+      version = "~> 0.3.0"
     }
   }
 }

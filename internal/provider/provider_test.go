@@ -22,6 +22,12 @@ func TestProtocolSchema(t *testing.T) {
 			t.Fatal(d.Detail)
 		}
 	}
+	if response.ResourceSchemas["tatnet_vpc"] == nil {
+		t.Fatal("VPC resource not registered")
+	}
+	if response.DataSourceSchemas["tatnet_vpc"] == nil {
+		t.Fatal("VPC data source not registered")
+	}
 	if response.DataSourceSchemas["tatnet_image"] == nil {
 		t.Fatal("image data source not registered")
 	}
@@ -73,8 +79,8 @@ func TestProviderConfiguration(t *testing.T) {
 
 func TestReleaseVersion(t *testing.T) {
 	var resp provider.MetadataResponse
-	NewWithVersion("0.2.0")().Metadata(context.Background(), provider.MetadataRequest{}, &resp)
-	if resp.Version != "0.2.0" {
+	NewWithVersion("0.3.0")().Metadata(context.Background(), provider.MetadataRequest{}, &resp)
+	if resp.Version != "0.3.0" {
 		t.Fatalf("incorrect release version: %q", resp.Version)
 	}
 }

@@ -73,8 +73,8 @@ func (*Provider) Configure(ctx context.Context, req provider.ConfigureRequest, r
 	resp.ResourceData = client
 }
 func (*Provider) Resources(context.Context) []func() resource.Resource {
-	return []func() resource.Resource{NewVMResource, NewFloatingIPResource}
+	return []func() resource.Resource{NewVMResource, NewFloatingIPResource, NewVPCResource}
 }
 func (*Provider) DataSources(context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{NewImageDataSource}
+	return []func() datasource.DataSource{NewImageDataSource, NewVPCDataSource}
 }

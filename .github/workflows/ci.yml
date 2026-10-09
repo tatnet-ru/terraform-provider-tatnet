@@ -58,3 +58,5 @@ jobs:
           terraform -chdir=examples/image validate -no-color
           terraform -chdir=examples/vm validate -no-color
           terraform -chdir=examples/floating-ip validate -no-color
+          terraform -chdir=examples/vpc validate -no-color
+          terraform -chdir=examples/vpc-managed validate -no-color
