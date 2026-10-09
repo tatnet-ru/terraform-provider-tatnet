@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/netip"
 	"strings"
 	"time"
@@ -299,7 +300,12 @@ func (r *natGatewayResource) Delete(ctx context.Context, req resource.DeleteRequ
 			return
 		}
 		if v.NatGateway.Enabled {
-			res, e := r.client.NetworkingDisableNatGatewayWithResponse(ctx, m.VPCID.ValueString())
+			res, e := r.client.NetworkingDisableNatGatewayWithResponse(ctx, m.VPCID.ValueString(), func(_ context.Context, req *http.Request) error {
+				query := req.URL.Query()
+				query.Set("expected_fip_id", m.ID.ValueString())
+				req.URL.RawQuery = query.Encode()
+				return nil
+			})
 			if e != nil {
 				resp.Diagnostics.AddError("NAT disable outcome unknown", "Refresh before retrying; allocation ID retained.")
 				return

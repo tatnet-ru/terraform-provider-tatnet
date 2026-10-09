@@ -7,8 +7,9 @@ description: |-
 
 # tatnet_nat_gateway (Resource)
 
-Development build only; not included in published version 0.3.0. Live lifecycle
-and guest internet reachability have not yet been verified for this resource.
+Development build only; not included in published version 0.3.0. Live lifecycle,
+import, DNS/HTTPS egress without a VM public IP and complete test cleanup were
+verified on 2026-10-09.
 
 Allocate a new public IPv4 address and SNAT the VPC subnet through it. One NAT
 gateway is allowed per VPC. **The IP is billed until released**, including while
@@ -52,7 +53,10 @@ or has no usable UUID, inspect the VPC/account and import any allocated gateway
 before retrying; POST is not retried automatically.
 
 Deletion reads the VPC and checks that its gateway still uses the owned IP.
-A different allocation blocks deletion. It disables the gateway once, then
+A different allocation blocks deletion. DELETE also sends `expected_fip_id`
+with the owned allocation UUID. The API checks this condition under a row lock:
+a gateway replaced after the read returns HTTP 409 and remains enabled.
+It disables the matching gateway once, then
 waits for both the VPC gateway to disappear and the owned IP to return HTTP 404.
 HTTP 202 or an already disabled gateway alone does not complete deletion.
 The API's automatic release runs asynchronously; timeouts and API failures
@@ -64,10 +68,9 @@ An IP being released remains tracked as `detaching`. A missing VPC with a paid
 allocation, an ownership mismatch or an API error requires reconciliation.
 Observed provisioning errors remain visible in `status`.
 
-API operations are scoped to the VPC, and there is no conditional disable using
-the expected IP UUID. The provider checks identity immediately before disabling,
-but that check does not serialize concurrent external changes. Use one owner for
-a gateway and avoid simultaneous console/API/Terraform mutations.
+Requires an API deployment supporting conditional NAT disable via
+`expected_fip_id`. Use one Terraform owner for each gateway; an ownership
+conflict requires reconciliation and is never retried as an unconditional DELETE.
 
 ## Import
 
@@ -82,4 +85,5 @@ this resource to disable the gateway and let the API release its IP on destroy.
 
 Unit tests cover lifecycle, polling, billing/auth errors, ambiguous writes,
 identity checks, state retention, import and replacement. A paid live test must
-verify the full lifecycle and egress from a VM before a public release.
+verify the full lifecycle and egress from a VM before a public release; this
+acceptance test passed on 2026-10-09.

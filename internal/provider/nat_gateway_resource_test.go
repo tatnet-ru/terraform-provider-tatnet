@@ -29,7 +29,11 @@ func natVPC(body string) string {
 func natHarness(t *testing.T, handler http.HandlerFunc) (*natGatewayResource, tfsdk.Plan, tfsdk.State) {
 	t.Helper()
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, q *http.Request) {
-		if q.Header.Get("Authorization") != "Bearer test-key" || q.URL.RawQuery != "" {
+		expectedQuery := ""
+		if q.Method == "DELETE" && strings.HasSuffix(q.URL.Path, "/nat-gateway") {
+			expectedQuery = "expected_fip_id=" + testNATID
+		}
+		if q.Header.Get("Authorization") != "Bearer test-key" || q.URL.RawQuery != expectedQuery {
 			t.Error("unexpected authentication/query")
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -171,7 +175,7 @@ func TestNATCreatePreflight(t *testing.T) {
 	}
 }
 func TestNATDelete(t *testing.T) {
-	for _, name := range []string{"normal", "delayed release", "already detaching", "absent", "missing VPC", "manual retention", "foreign gateway", "disable forbidden", "disable server error", "disable raced 404", "timeout", "IP forbidden", "IP mismatch", "IP retargeted", "network error", "malformed disable", "inconsistent missing IP", "VPC forbidden", "poll forbidden", "poll switched gateway", "IP malformed", "invalid gateway address"} {
+	for _, name := range []string{"normal", "delayed release", "already detaching", "absent", "missing VPC", "manual retention", "foreign gateway", "disable forbidden", "disable server error", "disable raced 404", "disable replaced gateway", "timeout", "IP forbidden", "IP mismatch", "IP retargeted", "network error", "malformed disable", "inconsistent missing IP", "VPC forbidden", "poll forbidden", "poll switched gateway", "IP malformed", "invalid gateway address"} {
 		t.Run(name, func(t *testing.T) {
 			var deletes, reads, ipReads atomic.Int32
 			r, _, state := natHarness(t, func(w http.ResponseWriter, q *http.Request) {
@@ -215,10 +219,16 @@ func TestNATDelete(t *testing.T) {
 					}
 					_, _ = w.Write([]byte(body))
 				case q.Method == "DELETE" && q.URL.Path == "/v1/vpcs/"+testVPCID+"/nat-gateway":
+					if q.URL.Query().Get("expected_fip_id") != testNATID {
+						t.Error("disable omitted the owned allocation precondition")
+					}
 					deletes.Add(1)
 					code := 202
 					body := strings.Replace(strings.Replace(natBody, `true`, `false`, 1), `"attached"`, `"detaching"`, 1)
 					switch name {
+					case "disable replaced gateway":
+						code = 409
+						body = `{"error":{"code":"nat_gateway_changed","message":"Gateway replaced"}}`
 					case "disable forbidden":
 						code = 403
 						body = `{"detail":"secret marker"}`
