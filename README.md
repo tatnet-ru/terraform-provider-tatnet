@@ -4,8 +4,8 @@
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.9.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.3.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
-и `tatnet_vpc` (data source и resource).
+Версия 0.4.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway`.
 
 ## Установка из Registry
 
@@ -14,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.3.0"
+      version = "0.4.0"
     }
   }
 }
@@ -39,7 +39,7 @@ provider "tatnet" {}
 Служебные семейства не выбираются. Обновление доступной сборки может изменить
 `id` при следующем plan; для будущей VM это потребует отдельной политики обновления.
 
-## NAT-шлюз — development build
+## NAT-шлюз — с версии 0.4.0
 
 `tatnet_nat_gateway` управляет исходящим NAT для VPC и выделяет новый платный
 публичный IPv4. Создание ждёт `attached`; удаление — снятия NAT и фактического
@@ -48,7 +48,7 @@ provider "tatnet" {}
 Не управляйте его IP через `tatnet_floating_ip`: API автоматически освобождает
 адрес после выключения шлюза. Пример: [examples/nat-gateway](examples/nat-gateway/main.tf).
 [Схема, ограничения и ошибки](docs/resources/nat_gateway.md).
-В версии 0.3.0 ресурса нет. Платный live lifecycle, DNS/HTTPS egress без
+Ресурс доступен с версии 0.4.0. Платный live lifecycle, DNS/HTTPS egress без
 индивидуального публичного IP VM, import и полная очистка прошли 9 октября 2026.
 DELETE передаёт ожидаемый UUID IP: замена шлюза между GET и DELETE возвращает
 409 и сохраняет state. Нужен API с поддержкой `expected_fip_id`.

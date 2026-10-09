@@ -7,7 +7,7 @@ description: |-
 
 # tatnet_nat_gateway (Resource)
 
-Development build only; not included in published version 0.3.0. Live lifecycle,
+Available from provider version 0.4.0. Live lifecycle,
 import, DNS/HTTPS egress without a VM public IP and complete test cleanup were
 verified on 2026-10-09.
 

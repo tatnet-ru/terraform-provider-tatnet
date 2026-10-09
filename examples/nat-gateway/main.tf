@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     tatnet = {
-      source = "tatnet-ru/tatnet"
+      source  = "tatnet-ru/tatnet"
+      version = ">= 0.4.0"
     }
   }
 }
@@ -12,7 +13,7 @@ variable "vpc_id" {
   type = string
 }
 
-# Development build: not available in the published 0.3.0 provider.
+# Requires provider 0.4.0 or later.
 # Enabling NAT allocates a paid public IPv4 address.
 resource "tatnet_nat_gateway" "example" {
   vpc_id = var.vpc_id
