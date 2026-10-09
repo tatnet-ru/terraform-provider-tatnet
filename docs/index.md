@@ -7,8 +7,8 @@ description: |-
 # TatNet Provider
 
 The TatNet provider manages virtual machines through the public TatNet API.
-Version 0.3.0 supports `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
-and `tatnet_vpc` as both a data source and a resource.
+Version 0.4.0 supports `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+and `tatnet_vpc` as both a data source and a resource, plus `tatnet_nat_gateway`.
 
 ## Example Usage
 
@@ -17,7 +17,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "~> 0.3.0"
+      version = "~> 0.4.0"
     }
   }
 }
@@ -53,9 +53,17 @@ Read the VM resource documentation before using persistent workloads.
 Version 0.3.0 adds `tatnet_vpc` as both a data source and a resource. See the VPC resource documentation
 for backend deletion-guard requirements, verified lifecycle and limitations.
 
-## Development NAT support
+## NAT support — version 0.4.0
 
-The development build adds `tatnet_nat_gateway`. It allocates a paid public IP
+Version 0.4.0 adds `tatnet_nat_gateway`. It allocates a paid public IP
 and waits for automatic release on destroy. It is not included in version 0.3.0.
 See its resource documentation for ownership, asynchronous deletion and live-test
 limitations.
+
+## Development DNS reads
+
+The development build adds `tatnet_dns_zone` and `tatnet_dns_record` data
+sources. Both read exact UUIDs; the record response must also match its parent
+zone UUID. API metadata is distinct from DNS delegation/propagation. See the
+DNS data-source documentation and examples/dns-read for postconditions.
+These sources are not included in version 0.4.0 and perform no DNS writes.
