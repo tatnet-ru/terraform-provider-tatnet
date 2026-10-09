@@ -7,7 +7,8 @@ description: |-
 # TatNet Provider
 
 The TatNet provider manages virtual machines through the public TatNet API.
-Version 0.2.0 supports `tatnet_image`, `tatnet_vm` and `tatnet_floating_ip`.
+Version 0.3.0 supports `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+and `tatnet_vpc` as both a data source and a resource.
 
 ## Example Usage
 
@@ -16,7 +17,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "~> 0.2.0"
+      version = "~> 0.3.0"
     }
   }
 }
@@ -46,3 +47,8 @@ Floating IP management requires account-scoped `floating_ip:read` and
 VM input changes require replacement. Import, in-place updates, custom sizing,
 cloud-init and power actions are not implemented.
 Read the VM resource documentation before using persistent workloads.
+
+## VPC support
+
+Version 0.3.0 adds `tatnet_vpc` as both a data source and a resource. See the VPC resource documentation
+for backend deletion-guard requirements, verified lifecycle and limitations.

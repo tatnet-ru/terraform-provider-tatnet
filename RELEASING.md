@@ -4,7 +4,7 @@
    logs and private signing material out of Git. Do not add co-author trailers.
 2. Ensure repository secrets `GPG_PRIVATE_KEY` and `PASSPHRASE` contain the
    dedicated release key. Its public half is in `signing/public-key.asc`.
-3. Tag the reviewed commit, for example `v0.1.0`, and push the tag. The Release
+3. Tag the reviewed commit, for example `v0.3.0`, and push the tag. The Release
    workflow builds six platform archives with GoReleaser v2.18.2, writes the
    Protocol 6 manifest, signs SHA256SUMS and creates a **draft** GitHub release.
 4. Download the draft assets. Verify signature, every checksum, archive names

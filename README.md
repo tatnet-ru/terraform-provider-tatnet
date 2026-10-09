@@ -4,7 +4,8 @@
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.9.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.2.0 поддерживает `tatnet_image`, `tatnet_vm` и `tatnet_floating_ip`.
+Версия 0.3.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+и `tatnet_vpc` (data source и resource).
 
 ## Установка из Registry
 
@@ -13,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.2.0"
+      version = "0.3.0"
     }
   }
 }
@@ -37,6 +38,29 @@ provider "tatnet" {}
 Отсутствие разрешения, нужной версии или региональной сборки — ошибка чтения.
 Служебные семейства не выбираются. Обновление доступной сборки может изменить
 `id` при следующем plan; для будущей VM это потребует отдельной политики обновления.
+
+## Управление VPC — с версии 0.3.0
+
+`resource "tatnet_vpc"` поддерживает create/read/delete/import. Создание ждёт
+`active` до десяти минут и сохраняет UUID при ошибках ожидания. Изменение имени,
+региона или подсети требует замены. Default-сеть и сеть с NAT удалять нельзя;
+отказ API сохраняет state. Серверная защита занятой non-default VPC установлена
+9 октября 2026. Live create → plan → import → destroy прошёл через production API;
+удаление с reserved IP вернуло 409 и сохранило state. Тестовые ресурсы удалены.
+
+Пример: [examples/vpc-managed](examples/vpc-managed/main.tf).
+[Схема, импорт и ограничения](docs/resources/vpc.md).
+Ресурс доступен с версии 0.3.0.
+
+## Чтение существующей VPC — с версии 0.3.0
+
+Добавлен `data "tatnet_vpc"`: по UUID читает регион, IPv4-подсеть, имя и
+опциональные статус/default-флаг. Требуется `vpc:read`. Пример `examples/vpc`
+проверяет совпадение региона через postcondition; `examples/vm` использует
+прочитанную сеть. Несовпадение останавливает план до создания VM.
+
+Data source доступен с версии 0.3.0 и не создаёт сеть, NAT или адреса. Проверка метаданных
+не подтверждает маршрутизацию или сетевую связность. [Схема](docs/data-sources/vpc.md).
 
 ## Локальный запуск
 
