@@ -34,6 +34,11 @@ func TestProtocolSchema(t *testing.T) {
 	if response.DataSourceSchemas["tatnet_image"] == nil {
 		t.Fatal("image data source not registered")
 	}
+	for _, name := range []string{"tatnet_dns_zone", "tatnet_dns_record"} {
+		if response.DataSourceSchemas[name] == nil {
+			t.Fatalf("DNS data source %s not registered", name)
+		}
+	}
 	if response.ResourceSchemas["tatnet_floating_ip"] == nil {
 		t.Fatal("floating IP resource not registered")
 	}

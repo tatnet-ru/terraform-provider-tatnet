@@ -39,6 +39,14 @@ provider "tatnet" {}
 Служебные семейства не выбираются. Обновление доступной сборки может изменить
 `id` при следующем plan; для будущей VM это потребует отдельной политики обновления.
 
+## Чтение DNS — development build
+
+Добавлены data sources `tatnet_dns_zone` и `tatnet_dns_record` по точным UUID.
+Проверяются ID записи и её зоны; доступны имя, тип, content, TTL и `managed`.
+В опубликованной 0.4.0 этих data sources ещё нет. Они читают метаданные API;
+публичный DNS проверяется отдельно. Пример с postconditions для домена и IP:
+[examples/dns-read](examples/dns-read/main.tf). Изменение DNS этим шагом не выполняется.
+
 ## NAT-шлюз — с версии 0.4.0
 
 `tatnet_nat_gateway` управляет исходящим NAT для VPC и выделяет новый платный

@@ -76,5 +76,5 @@ func (*Provider) Resources(context.Context) []func() resource.Resource {
 	return []func() resource.Resource{NewVMResource, NewFloatingIPResource, NewVPCResource, NewNATGatewayResource}
 }
 func (*Provider) DataSources(context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{NewImageDataSource, NewVPCDataSource}
+	return []func() datasource.DataSource{NewImageDataSource, NewVPCDataSource, NewDNSZoneDataSource, NewDNSRecordDataSource}
 }
