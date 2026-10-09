@@ -60,3 +60,4 @@ jobs:
           terraform -chdir=examples/floating-ip validate -no-color
           terraform -chdir=examples/vpc validate -no-color
           terraform -chdir=examples/vpc-managed validate -no-color
+          terraform -chdir=examples/nat-gateway validate -no-color

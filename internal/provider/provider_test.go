@@ -22,6 +22,9 @@ func TestProtocolSchema(t *testing.T) {
 			t.Fatal(d.Detail)
 		}
 	}
+	if response.ResourceSchemas["tatnet_nat_gateway"] == nil {
+		t.Fatal("NAT resource not registered")
+	}
 	if response.ResourceSchemas["tatnet_vpc"] == nil {
 		t.Fatal("VPC resource not registered")
 	}

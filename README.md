@@ -39,6 +39,17 @@ provider "tatnet" {}
 Служебные семейства не выбираются. Обновление доступной сборки может изменить
 `id` при следующем plan; для будущей VM это потребует отдельной политики обновления.
 
+## NAT-шлюз — development build
+
+`tatnet_nat_gateway` управляет исходящим NAT для VPC и выделяет новый платный
+публичный IPv4. Создание ждёт `attached`; удаление — снятия NAT и фактического
+освобождения IP. Таймауты/ошибки сохраняют ID; несовпадение UUID шлюза блокирует удаление. Импорт: `VPC_UUID/FLOATING_IP_UUID`.
+
+Не управляйте его IP через `tatnet_floating_ip`: API автоматически освобождает
+адрес после выключения шлюза. Пример: [examples/nat-gateway](examples/nat-gateway/main.tf).
+[Схема, ограничения и ошибки](docs/resources/nat_gateway.md).
+В версии 0.3.0 ресурса нет; платный live lifecycle и egress ещё не проверены.
+
 ## Управление VPC — с версии 0.3.0
 
 `resource "tatnet_vpc"` поддерживает create/read/delete/import. Создание ждёт
