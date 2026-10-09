@@ -48,7 +48,10 @@ provider "tatnet" {}
 Не управляйте его IP через `tatnet_floating_ip`: API автоматически освобождает
 адрес после выключения шлюза. Пример: [examples/nat-gateway](examples/nat-gateway/main.tf).
 [Схема, ограничения и ошибки](docs/resources/nat_gateway.md).
-В версии 0.3.0 ресурса нет; платный live lifecycle и egress ещё не проверены.
+В версии 0.3.0 ресурса нет. Платный live lifecycle, DNS/HTTPS egress без
+индивидуального публичного IP VM, import и полная очистка прошли 9 октября 2026.
+DELETE передаёт ожидаемый UUID IP: замена шлюза между GET и DELETE возвращает
+409 и сохраняет state. Нужен API с поддержкой `expected_fip_id`.
 
 ## Управление VPC — с версии 0.3.0
 
