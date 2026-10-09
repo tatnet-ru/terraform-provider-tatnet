@@ -52,3 +52,10 @@ Read the VM resource documentation before using persistent workloads.
 
 Version 0.3.0 adds `tatnet_vpc` as both a data source and a resource. See the VPC resource documentation
 for backend deletion-guard requirements, verified lifecycle and limitations.
+
+## Development NAT support
+
+The development build adds `tatnet_nat_gateway`. It allocates a paid public IP
+and waits for automatic release on destroy. It is not included in version 0.3.0.
+See its resource documentation for ownership, asynchronous deletion and live-test
+limitations.
