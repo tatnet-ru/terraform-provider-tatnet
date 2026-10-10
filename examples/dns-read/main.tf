@@ -1,7 +1,8 @@
 terraform {
   required_providers {
     tatnet = {
-      source = "tatnet-ru/tatnet"
+      source  = "tatnet-ru/tatnet"
+      version = ">= 0.5.0"
     }
   }
 }
@@ -23,7 +24,6 @@ variable "expected_address" {
   default = "192.0.2.10"
 }
 
-# Development build: these data sources are not included in version 0.4.0.
 data "tatnet_dns_zone" "existing" {
   id = var.zone_id
   lifecycle {

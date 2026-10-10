@@ -1,7 +1,9 @@
-# Development build. DNS support is not included in Registry 0.4.0.
 terraform {
   required_providers {
-    tatnet = { source = "tatnet-ru/tatnet" }
+    tatnet = {
+      source  = "tatnet-ru/tatnet"
+      version = ">= 0.5.0"
+    }
   }
 }
 provider "tatnet" {}

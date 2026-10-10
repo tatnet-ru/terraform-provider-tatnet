@@ -4,8 +4,8 @@
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.10.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.4.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
-и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway`.
+Версия 0.5.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway` и DNS data sources/resources.
 
 ## Установка из Registry
 
@@ -14,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.4.0"
+      version = "0.5.0"
     }
   }
 }
@@ -39,11 +39,11 @@ provider "tatnet" {}
 Служебные семейства не выбираются. Обновление доступной сборки может изменить
 `id` при следующем plan; для будущей VM это потребует отдельной политики обновления.
 
-## Чтение DNS — development build
+## Чтение DNS — с версии 0.5.0
 
 Добавлены data sources `tatnet_dns_zone` и `tatnet_dns_record` по точным UUID.
 Проверяются ID записи и её зоны; доступны имя, тип, content, TTL и `managed`.
-В опубликованной 0.4.0 этих data sources ещё нет. Они читают метаданные API;
+Data sources доступны с версии 0.5.0 и читают метаданные API;
 публичный DNS проверяется отдельно. Пример с postconditions для домена и IP:
 [examples/dns-read](examples/dns-read/main.tf). Чтение через data sources не меняет DNS.
 
@@ -51,8 +51,7 @@ provider "tatnet" {}
 Меняется только content; зона, имя и тип требуют замены. TTL общий для RRset,
 поэтому этот ресурс его никогда не записывает. Платформенные записи защищены,
 ошибки сохраняют state. Пример: [examples/dns-record](examples/dns-record/main.tf).
-[Схема и ограничения](docs/resources/dns_record.md). Ресурс также пока доступен
-только в development build.
+[Схема и ограничения](docs/resources/dns_record.md). Ресурс доступен с версии 0.5.0.
 
 ## NAT-шлюз — с версии 0.4.0
 
@@ -209,12 +208,11 @@ VPC NAT и адреса с `auto_release=true` этим ресурсом не у
 Пример: [examples/floating-ip](examples/floating-ip/main.tf).
 [Схема и обработка ошибок](docs/resources/floating_ip.md).
 
-## Атомарный DNS RRset — development build
+## Атомарный DNS RRset — с версии 0.5.0
 
 `tatnet_dns_rrset` управляет всем набором `records` и общим `ttl`.
 Создание не перезаписывает существующий набор; update/delete требуют ревизию
 из state, конфликт сохраняет state без автоматического повторения.
 TTL=null наследует значение зоны. Отдельную запись и её RRset нельзя
 управлять разными ресурсами/state. Пример: [examples/dns-rrset](examples/dns-rrset/main.tf).
-[Схема, импорт и ограничения](docs/resources/dns_rrset.md). В Registry 0.4.0
-ресурса ещё нет.
+[Схема, импорт и ограничения](docs/resources/dns_rrset.md). Ресурс доступен с версии 0.5.0.
