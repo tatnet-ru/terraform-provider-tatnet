@@ -69,8 +69,8 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.7.2/go.mod h1:R6va5+xMeoiuVRoj+gSkQ7d3FALtqAAGI1FQKckRals=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/tatnet-ru/tatnet-go v0.9.0 h1:WwKuGfyosn1HBXYDMsxJthJLNmuOnC0/MWVrUxARn8M=
-github.com/tatnet-ru/tatnet-go v0.9.0/go.mod h1:S+8+VKiXIvmoIQgQ3r/J5SHg+XkKsj2zSb0MuoWNq2s=
+github.com/tatnet-ru/tatnet-go v0.10.0 h1:M8DuuOU7WW+HPIODwNLKn/Oywt+WicVUP5xu3VRndl0=
+github.com/tatnet-ru/tatnet-go v0.10.0/go.mod h1:S+8+VKiXIvmoIQgQ3r/J5SHg+XkKsj2zSb0MuoWNq2s=
 github.com/vmihailenco/msgpack/v5 v5.4.1 h1:cQriyiUvjTwOHg8QZaPihLWeRAAVoCpE00IUPn0Bjt8=
 github.com/vmihailenco/msgpack/v5 v5.4.1/go.mod h1:GaZTsDaehaPpQVyxrf5mtQlH+pc21PIudVV/E3rRQok=
 github.com/vmihailenco/tagparser/v2 v2.0.0 h1:y09buUbR+b5aycVFQs/g70pqKVZNBmxwAhO7/IwNM9g=

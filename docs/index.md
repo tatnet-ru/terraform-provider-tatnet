@@ -72,3 +72,7 @@ The development `tatnet_dns_record` resource manages an individual record
 with create/read/content-update/delete/import. Shared RRset TTL is read-only.
 See its resource documentation for ownership, import and concurrency limits.
 It is also not included in version 0.4.0.
+
+The development `tatnet_dns_rrset` resource owns all values and their shared TTL.
+Conditional revisions protect update/delete against concurrent edits. It is
+not included in 0.4.0; see the resource documentation for ownership and import.

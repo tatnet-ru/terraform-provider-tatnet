@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml/badge.svg)](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml)
 
-Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.9.0`.
+Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.10.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
 Версия 0.4.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
 и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway`.
@@ -208,3 +208,13 @@ Apache-2.0; см. [LICENSE](LICENSE).
 VPC NAT и адреса с `auto_release=true` этим ресурсом не управляются.
 Пример: [examples/floating-ip](examples/floating-ip/main.tf).
 [Схема и обработка ошибок](docs/resources/floating_ip.md).
+
+## Атомарный DNS RRset — development build
+
+`tatnet_dns_rrset` управляет всем набором `records` и общим `ttl`.
+Создание не перезаписывает существующий набор; update/delete требуют ревизию
+из state, конфликт сохраняет state без автоматического повторения.
+TTL=null наследует значение зоны. Отдельную запись и её RRset нельзя
+управлять разными ресурсами/state. Пример: [examples/dns-rrset](examples/dns-rrset/main.tf).
+[Схема, импорт и ограничения](docs/resources/dns_rrset.md). В Registry 0.4.0
+ресурса ещё нет.
