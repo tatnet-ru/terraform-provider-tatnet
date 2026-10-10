@@ -1,7 +1,9 @@
-# Development build: not included in the published 0.4.0 release.
 terraform {
   required_providers {
-    tatnet = { source = "tatnet-ru/tatnet" }
+    tatnet = {
+      source  = "tatnet-ru/tatnet"
+      version = ">= 0.5.0"
+    }
   }
 }
 provider "tatnet" {}

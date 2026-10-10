@@ -7,7 +7,7 @@ description: |-
 
 # tatnet_dns_record (Data Source)
 
-Development build only; not included in published version 0.4.0.
+Available from provider version 0.5.0.
 Requires `dns_zone:read` on the parent zone.
 
 ```hcl

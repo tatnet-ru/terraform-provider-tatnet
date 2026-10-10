@@ -6,7 +6,7 @@ description: |-
 
 # tatnet_dns_rrset (Resource)
 
-Development build only, not in Registry 0.4.0. Requires the atomic RRset API
+Available from provider version 0.5.0. Requires the atomic RRset API
 and `dns_zone:read` plus `dns_zone:write` permissions on the account zone.
 
 ```terraform

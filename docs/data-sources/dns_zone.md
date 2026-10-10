@@ -7,7 +7,7 @@ description: |-
 
 # tatnet_dns_zone (Data Source)
 
-Development build only; not included in published version 0.4.0.
+Available from provider version 0.5.0.
 Requires `dns_zone:read` on the selected zone. Reads one exact UUID; it does
 not create a zone, verify delegation, change DNSSEC, or adopt records.
 

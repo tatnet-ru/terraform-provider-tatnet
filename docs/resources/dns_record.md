@@ -6,7 +6,7 @@ description: |-
 
 # tatnet_dns_record (Resource)
 
-Development build only; not included in the published 0.4.0 release.
+Available from provider version 0.5.0.
 Requires `dns_zone:read` and `dns_zone:write` on the selected account zone.
 
 ## Example Usage
