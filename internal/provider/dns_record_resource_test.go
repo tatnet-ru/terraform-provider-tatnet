@@ -391,3 +391,92 @@ func TestDNSRecordTransportFailure(t *testing.T) {
 		})
 	}
 }
+
+func TestDNSRecordWriteResponses(t *testing.T) {
+	for _, op := range []string{"update", "delete"} {
+		cases := []struct {
+			name, body string
+			code       int
+			bad        bool
+		}{
+			{"forbidden", `{"detail":"secret marker"}`, 403, true}, {"conflict", `{"detail":"secret marker"}`, 409, true}, {"transport", "", 0, true},
+		}
+		if op == "update" {
+			cases = append(cases, struct {
+				name, body string
+				code       int
+				bad        bool
+			}{"wrong parent", strings.Replace(dnsRecordBody, testVPCID, testNATID, 1), 200, true}, struct {
+				name, body string
+				code       int
+				bad        bool
+			}{"wrong content", strings.Replace(dnsRecordBody, "192.0.2.10", "192.0.2.30", 1), 200, true}, struct {
+				name, body string
+				code       int
+				bad        bool
+			}{"malformed", "{", 200, true})
+		} else {
+			cases = append(cases, struct {
+				name, body string
+				code       int
+				bad        bool
+			}{"already deleted", "", 404, false})
+		}
+		for _, tc := range cases {
+			t.Run(op+"/"+tc.name, func(t *testing.T) {
+				var writes atomic.Int32
+				r, p, s := dnsResourceHarness(t, func(w http.ResponseWriter, q *http.Request) {
+					if q.Method == "GET" {
+						_, _ = w.Write([]byte(dnsRecordBody))
+						return
+					}
+					writes.Add(1)
+					if tc.code == 0 {
+						conn, _, e := w.(http.Hijacker).Hijack()
+						if e != nil {
+							t.Error(e)
+							return
+						}
+						_ = conn.Close()
+						return
+					}
+					w.WriteHeader(tc.code)
+					_, _ = w.Write([]byte(tc.body))
+				})
+				ctx := context.Background()
+				var bad bool
+				var result tfsdk.State
+				if op == "update" {
+					m := dnsResourceState(t, s)
+					m.Content = types.StringValue("192.0.2.20")
+					_ = p.Set(ctx, &m)
+					resp := resource.UpdateResponse{State: s}
+					r.Update(ctx, resource.UpdateRequest{Plan: p, State: s}, &resp)
+					bad = resp.Diagnostics.HasError()
+					result = resp.State
+					for _, d := range resp.Diagnostics {
+						if strings.Contains(d.Detail(), "secret marker") {
+							t.Fatal("body leaked")
+						}
+					}
+				} else {
+					resp := resource.DeleteResponse{State: s}
+					r.Delete(ctx, resource.DeleteRequest{State: s}, &resp)
+					bad = resp.Diagnostics.HasError()
+					result = resp.State
+					for _, d := range resp.Diagnostics {
+						if strings.Contains(d.Detail(), "secret marker") {
+							t.Fatal("body leaked")
+						}
+					}
+				}
+				if bad != tc.bad || writes.Load() != 1 {
+					t.Fatal("write error mishandled or retried", writes.Load())
+				}
+				if tc.bad && !result.Raw.Equal(s.Raw) {
+					t.Fatal("state lost")
+				}
+			})
+		}
+	}
+}
