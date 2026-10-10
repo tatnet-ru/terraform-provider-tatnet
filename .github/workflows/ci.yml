@@ -62,3 +62,4 @@ jobs:
           terraform -chdir=examples/vpc-managed validate -no-color
           terraform -chdir=examples/nat-gateway validate -no-color
           terraform -chdir=examples/dns-read validate -no-color
+          terraform -chdir=examples/dns-record validate -no-color

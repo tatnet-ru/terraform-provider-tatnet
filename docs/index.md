@@ -67,3 +67,8 @@ sources. Both read exact UUIDs; the record response must also match its parent
 zone UUID. API metadata is distinct from DNS delegation/propagation. See the
 DNS data-source documentation and examples/dns-read for postconditions.
 These sources are not included in version 0.4.0 and perform no DNS writes.
+
+The development `tatnet_dns_record` resource manages an individual record
+with create/read/content-update/delete/import. Shared RRset TTL is read-only.
+See its resource documentation for ownership, import and concurrency limits.
+It is also not included in version 0.4.0.
