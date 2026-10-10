@@ -45,7 +45,14 @@ provider "tatnet" {}
 Проверяются ID записи и её зоны; доступны имя, тип, content, TTL и `managed`.
 В опубликованной 0.4.0 этих data sources ещё нет. Они читают метаданные API;
 публичный DNS проверяется отдельно. Пример с postconditions для домена и IP:
-[examples/dns-read](examples/dns-read/main.tf). Изменение DNS этим шагом не выполняется.
+[examples/dns-read](examples/dns-read/main.tf). Чтение через data sources не меняет DNS.
+
+Добавлен resource `tatnet_dns_record` для create/read/update/delete/import.
+Меняется только content; зона, имя и тип требуют замены. TTL общий для RRset,
+поэтому этот ресурс его никогда не записывает. Платформенные записи защищены,
+ошибки сохраняют state. Пример: [examples/dns-record](examples/dns-record/main.tf).
+[Схема и ограничения](docs/resources/dns_record.md). Ресурс также пока доступен
+только в development build.
 
 ## NAT-шлюз — с версии 0.4.0
 
