@@ -22,6 +22,9 @@ func TestProtocolSchema(t *testing.T) {
 			t.Fatal(d.Detail)
 		}
 	}
+	if response.ResourceSchemas["tatnet_dns_rrset"] == nil {
+		t.Fatal("RRset resource not registered")
+	}
 	if response.ResourceSchemas["tatnet_dns_record"] == nil {
 		t.Fatal("DNS resource not registered")
 	}
