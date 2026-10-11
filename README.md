@@ -216,3 +216,19 @@ VPC NAT и адреса с `auto_release=true` этим ресурсом не у
 TTL=null наследует значение зоны. Отдельную запись и её RRset нельзя
 управлять разными ресурсами/state. Пример: [examples/dns-rrset](examples/dns-rrset/main.tf).
 [Схема, импорт и ограничения](docs/resources/dns_rrset.md). Ресурс доступен с версии 0.5.0.
+
+## Kubernetes — development
+
+Добавлены `tatnet_kubernetes_region` (чтение предлагаемых версий по региону)
+и `tatnet_kubernetes_cluster` (create/read/delete/import). В 0.5.0 их ещё нет;
+для проверки используйте development build и dev_overrides.
+Примеры: [read-only](examples/kubernetes-read/main.tf),
+[кластер с приватным API](examples/kubernetes/main.tf).
+
+Версии и topology задаются явно. Любое изменение входных параметров требует
+замены всего кластера, включая worker_count и версии; scaling/upgrades пока
+не реализованы. Пример включает prevent_destroy. Create сохраняет ID до ожидания
+ready/active pools, Delete ждёт HTTP 404; ошибки сохраняют state, мутации не
+повторяются автоматически. Kubeconfig не загружается и не хранится в state.
+Импорт: PROJECT_UUID/CLUSTER_UUID.
+[Ограничения](docs/resources/kubernetes_cluster.md).

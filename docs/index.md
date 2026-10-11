@@ -74,3 +74,5 @@ See its resource documentation for ownership, import and concurrency limits.
 
 The `tatnet_dns_rrset` resource owns all values and their shared TTL.
 Conditional revisions protect update/delete against concurrent edits. See the resource documentation for ownership and import.
+
+Development Kubernetes support: `tatnet_kubernetes_region` and `tatnet_kubernetes_cluster`; not included in 0.5.0. All cluster input changes replace the cluster; see resource documentation.

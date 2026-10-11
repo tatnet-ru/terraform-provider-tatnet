@@ -22,6 +22,9 @@ func TestProtocolSchema(t *testing.T) {
 			t.Fatal(d.Detail)
 		}
 	}
+	if response.ResourceSchemas["tatnet_kubernetes_cluster"] == nil || response.DataSourceSchemas["tatnet_kubernetes_region"] == nil {
+		t.Fatal("Kubernetes schemas not registered")
+	}
 	if response.ResourceSchemas["tatnet_dns_rrset"] == nil {
 		t.Fatal("RRset resource not registered")
 	}
