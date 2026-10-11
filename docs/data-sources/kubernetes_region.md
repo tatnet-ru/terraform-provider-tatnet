@@ -6,7 +6,7 @@ description: "Read offered Kubernetes and regional Talos versions."
 
 # tatnet_kubernetes_region (Data Source)
 
-Development feature, not included in 0.5.0. Reads `/v1/kubernetes/regions`, selecting
+Available since version 0.6.0. Reads `/v1/kubernetes/regions`, selecting
 one exact region UUID and validating its catalog. Does not create a cluster or
 retrieve credentials. Requires `k8s_cluster:read`.
 

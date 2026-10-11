@@ -1,7 +1,9 @@
-# Development feature; use dev_overrides until a release includes Kubernetes.
 terraform {
   required_providers {
-    tatnet = { source = "tatnet-ru/tatnet" }
+    tatnet = {
+      source  = "tatnet-ru/tatnet"
+      version = "~> 0.6.0"
+    }
   }
 }
 provider "tatnet" {}

@@ -6,7 +6,7 @@ description: "Manage a TatNet Kubernetes cluster with explicit versions and node
 
 # tatnet_kubernetes_cluster (Resource)
 
-Development feature, not included in release 0.5.0. Supports create/read/delete/import
+Available since version 0.6.0. Supports create/read/delete/import
 for a paid cluster with one control-plane pool and one worker pool using the same
 VM plan. Requires `k8s_cluster:create/read/delete` and sufficient account funds.
 Cluster creation can allocate billable nodes and a public API endpoint, depending
