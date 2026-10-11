@@ -4,8 +4,8 @@
 
 Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.10.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.5.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
-и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway` и DNS data sources/resources.
+Версия 0.6.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway` и DNS data sources/resources и Kubernetes.
 
 ## Установка из Registry
 
@@ -14,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.5.0"
+      version = "0.6.0"
     }
   }
 }
@@ -217,11 +217,10 @@ TTL=null наследует значение зоны. Отдельную зап
 управлять разными ресурсами/state. Пример: [examples/dns-rrset](examples/dns-rrset/main.tf).
 [Схема, импорт и ограничения](docs/resources/dns_rrset.md). Ресурс доступен с версии 0.5.0.
 
-## Kubernetes — development
+## Kubernetes — с версии 0.6.0
 
 Добавлены `tatnet_kubernetes_region` (чтение предлагаемых версий по региону)
-и `tatnet_kubernetes_cluster` (create/read/delete/import). В 0.5.0 их ещё нет;
-для проверки используйте development build и dev_overrides.
+и `tatnet_kubernetes_cluster` (create/read/delete/import), доступные с версии 0.6.0.
 Примеры: [read-only](examples/kubernetes-read/main.tf),
 [кластер с приватным API](examples/kubernetes/main.tf).
 

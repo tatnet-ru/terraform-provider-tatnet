@@ -7,8 +7,8 @@ description: |-
 # TatNet Provider
 
 The TatNet provider manages virtual machines through the public TatNet API.
-Version 0.5.0 supports `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
-and `tatnet_vpc` as both a data source and a resource, plus `tatnet_nat_gateway` and DNS data sources/resources.
+Version 0.6.0 supports `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+and `tatnet_vpc` as both a data source and a resource, plus `tatnet_nat_gateway`, DNS data sources/resources and Kubernetes.
 
 ## Example Usage
 
@@ -17,7 +17,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "~> 0.5.0"
+      version = "~> 0.6.0"
     }
   }
 }
@@ -75,4 +75,4 @@ See its resource documentation for ownership, import and concurrency limits.
 The `tatnet_dns_rrset` resource owns all values and their shared TTL.
 Conditional revisions protect update/delete against concurrent edits. See the resource documentation for ownership and import.
 
-Development Kubernetes support: `tatnet_kubernetes_region` and `tatnet_kubernetes_cluster`; not included in 0.5.0. All cluster input changes replace the cluster; see resource documentation.
+Kubernetes support since version 0.6.0: `tatnet_kubernetes_region` and `tatnet_kubernetes_cluster`. All cluster input changes replace the cluster; see resource documentation.
