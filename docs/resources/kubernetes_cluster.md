@@ -8,12 +8,15 @@ description: "Manage a TatNet Kubernetes cluster with explicit versions and node
 
 Available since version 0.6.0. Supports create/read/delete/import
 for a paid cluster with one control-plane pool and one worker pool using the same
-VM plan. Requires `k8s_cluster:create/read/delete` and sufficient account funds.
+VM plan. Requires `k8s_cluster:create/read/delete`, plus `k8s_cluster:update` for
+worker scaling, and sufficient account funds.
 Cluster creation can allocate billable nodes and a public API endpoint, depending
 on endpoint mode. Terraform plan does not verify funds or VM-plan availability.
 
-**Every input change replaces the entire cluster**, including node counts and
-versions. Scaling and rolling upgrades are not implemented. For persistent workloads
+In the next release, **`worker_count` changes scale the existing worker pool in
+place**. All other input changes replace the entire cluster, including
+`control_plane_count`, versions, VM plan and disk override. Version 0.6.0 still
+replaces the cluster on worker-count changes. Rolling upgrades are not implemented. For persistent workloads
 use `lifecycle { prevent_destroy = true }`, and inspect every plan. Cluster deletion
 is not a backup or a migration strategy for workload data/PVs.
 
@@ -62,7 +65,7 @@ prove this route. The provider never downloads kubeconfig or cluster-admin crede
 Create issues one POST and persists the returned valid UUID before polling.
 It waits for cluster `ready`, both pools `active`, and no ongoing upgrade.
 These are API observations, not a workload/CSI/CCM/ingress smoke test.
-Create and delete have a 45-minute operation deadline, with five-second polling.
+Create, update and delete have a 45-minute operation deadline, with five-second polling.
 
 No mutation is automatically retried. An ambiguous POST without a usable result
 requires checking project clusters and importing the created cluster before retrying.
@@ -73,6 +76,35 @@ Read verifies project/cluster identity and the supported two-pool topology.
 Only HTTP 404 removes state; HTTP 403/500 or malformed responses retain it.
 External changes are reflected in state when representable; heterogeneous VM plans
 or additional pools require manual reconciliation rather than silently guessing inputs.
+
+### Worker scaling (next release)
+
+Changing only `worker_count` (0–50) sends one POST to the existing worker pool's
+scale endpoint; it never creates or deletes the cluster. Increasing the count
+creates billable VMs. Decreasing it asks the platform to drain and remove excess
+workers. Scaling to zero leaves control-plane nodes running; workloads then have
+no worker capacity. `prevent_destroy` prevents cluster replacement/deletion but
+**does not prevent worker removal**, Pod disruption or downtime during scaling.
+Plan capacity and disruption budgets before reducing the count.
+
+Scaling requires a ready cluster without an ongoing upgrade. A new desired count
+is rejected if either pool is busy or the observed worker intent has changed
+since the previous state. If the API already has the requested desired count,
+Update skips the POST and waits for convergence. Concurrent Terraform/operator
+writes are not serialized by the provider; use one owner for this worker pool.
+
+Update verifies unchanged creation inputs and worker-pool identity. It waits for
+ready/active API status and exactly the requested worker and control-plane node
+rows, with unique VM identities and no draining/removing nodes. Counting rows
+prevents a temporarily stale `active` status from completing scale-down early.
+API pool status uses VM state; this is **not proof of Kubernetes Node Ready,
+workload readiness, successful PVC relocation, or physical/billing cleanup**.
+
+An acknowledged desired count and the cluster identity remain in state if polling
+fails or times out. An ambiguous or malformed response is never retried; refresh
+and inspect the pool/nodes before another apply. Refresh reads desired intent,
+so a later no-op plan does not by itself prove an interrupted scale has converged.
+No kubeconfig or controller credentials are requested during scaling.
 
 Delete skips a repeated DELETE if the cluster is already deleting, and waits for
 GET 404 after HTTP 202. Errors/timeouts retain state. GET 404 proves control-plane

@@ -60,16 +60,17 @@ func (*kubernetesClusterResource) Schema(_ context.Context, _ resource.SchemaReq
 		attrs[name] = schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Explicit creation input. Changes replace the entire cluster."}
 	}
 	attrs["vpc_id"] = schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Existing VPC UUID; requires endpoint_access=private. Changes replace the cluster."}
-	for _, name := range []string{"control_plane_count", "worker_count"} {
-		attrs[name] = schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Node count. Changes replace the cluster; in-place scaling is not implemented."}
+	for _, name := range []string{"control_plane_count"} {
+		attrs[name] = schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Control-plane node count. Changes replace the cluster."}
 	}
+	attrs["worker_count"] = schema.Int64Attribute{Required: true, Description: "Worker count, 0–50. Changes scale the worker pool in place; scale-down drains and removes nodes."}
 	attrs["worker_disk_size_gb"] = schema.Int64Attribute{Optional: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Worker disk override, 10–4000 GB. Omit to use the plan default. Changes replace the cluster."}
 	attrs["id"] = schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}
 	for _, name := range []string{"status", "endpoint_dns", "endpoint_ip", "internal_vip"} {
 		attrs[name] = schema.StringAttribute{Computed: true}
 	}
 	attrs["endpoint_port"] = schema.Int64Attribute{Computed: true}
-	resp.Schema = schema.Schema{Description: "Manage a paid Kubernetes cluster with one control-plane pool and one worker pool using the same VM plan. All input changes replace the entire cluster. Use lifecycle.prevent_destroy for persistent workloads. Create/delete wait up to 45 minutes; interrupted operations retain identity. No kubeconfig is fetched.", Attributes: attrs}
+	resp.Schema = schema.Schema{Description: "Manage a paid Kubernetes cluster with one control-plane pool and one worker pool using the same VM plan. Worker count changes scale in place; other input changes replace the entire cluster. Use lifecycle.prevent_destroy for persistent workloads. Create/update/delete wait up to 45 minutes; interrupted operations retain identity. No kubeconfig is fetched.", Attributes: attrs}
 }
 func validateKubernetesConfig(m kubernetesClusterModel, known bool) error {
 	for name, v := range map[string]types.String{"project_id": m.ProjectID, "region_id": m.RegionID, "vm_plan_id": m.VMPlanID, "vpc_id": m.VPCID} {
@@ -377,8 +378,179 @@ func (r *kubernetesClusterResource) Read(ctx context.Context, req resource.ReadR
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &m)...)
 }
-func (*kubernetesClusterResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("Kubernetes update unsupported", "Input changes must replace the cluster. Scaling and upgrades are not implemented.")
+
+// Worker scaling leaves all other creation inputs immutable.
+func kubernetesFixedInputsEqual(a, b kubernetesClusterModel) bool {
+	a.WorkerCount = b.WorkerCount
+	return kubernetesInputsEqual(a, b)
+}
+func kubernetesWorkerPool(v *tatnet.V1K8sCluster) *tatnet.V1K8sNodePool {
+	for i := range *v.NodePools {
+		if (*v.NodePools)[i].Role == "worker" {
+			return &(*v.NodePools)[i]
+		}
+	}
+	return nil // callers validate topology through observe first
+}
+
+// Pool status is derived from VM status and can briefly remain active after a
+// scale-down request. Count ALL node rows, including those being drained, so an
+// update cannot report completion before the excess nodes have been retired.
+func (r *kubernetesClusterResource) scalingNodesConverged(ctx context.Context, m kubernetesClusterModel) (bool, error) {
+	res, err := r.client.KubernetesListClusterNodesWithResponse(ctx, m.ProjectID.ValueString(), m.ID.ValueString())
+	if err != nil {
+		return false, fmt.Errorf("Kubernetes node request failed; check connectivity")
+	}
+	if res.StatusCode() != 200 || res.JSON200 == nil {
+		return false, fmt.Errorf("Kubernetes nodes returned HTTP %d without usable metadata", res.StatusCode())
+	}
+	ids, vms := map[string]bool{}, map[string]bool{}
+	counts := map[string]int{"controlplane": 0, "worker": 0}
+	pending := false
+	for _, n := range *res.JSON200 {
+		id := strings.ToLower(n.Id)
+		if !vpcUUID.MatchString(n.Id) || ids[id] {
+			return false, fmt.Errorf("invalid or duplicate node identity")
+		}
+		ids[id] = true
+		if _, ok := counts[n.Role]; !ok {
+			return false, fmt.Errorf("unsupported node role")
+		}
+		counts[n.Role]++
+		if n.Status == "error" {
+			return false, fmt.Errorf("Kubernetes node provisioning failed")
+		}
+		if n.Status == "" {
+			return false, fmt.Errorf("missing node status")
+		}
+		pending = pending || n.Status == "removing" || n.Status == "removed" || n.VmId == nil
+		if n.VmId != nil {
+			vm := strings.ToLower(*n.VmId)
+			if !vpcUUID.MatchString(vm) || vms[vm] {
+				return false, fmt.Errorf("invalid or duplicate node VM identity")
+			}
+			vms[vm] = true
+		}
+	}
+	return !pending && counts["controlplane"] == int(m.ControlPlaneCount.ValueInt64()) && counts["worker"] == int(m.WorkerCount.ValueInt64()), nil
+}
+func (r *kubernetesClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	resp.State = req.State
+	var planned, previous kubernetesClusterModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planned)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &previous)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	planned.ID = previous.ID
+	if err := validateKubernetesConfig(planned, true); err != nil {
+		resp.Diagnostics.AddError("Invalid Kubernetes configuration", err.Error())
+		return
+	}
+	if !kubernetesFixedInputsEqual(previous, planned) {
+		resp.Diagnostics.AddError("Kubernetes replacement required", "Only worker_count can be updated in place.")
+		return
+	}
+	ctx, cancel := r.operation(ctx)
+	defer cancel()
+	v, err := r.get(ctx, previous)
+	current := previous
+	if err == nil {
+		err = current.observe(v)
+	}
+	if err != nil {
+		resp.Diagnostics.AddError("Cannot scale Kubernetes cluster", err.Error()+"; state retained")
+		return
+	}
+	if !kubernetesFixedInputsEqual(planned, current) {
+		resp.Diagnostics.AddError("Kubernetes configuration changed", "Refresh and reconcile non-worker inputs before scaling; state retained.")
+		return
+	}
+	if v.Status != "ready" || (v.Upgrading != nil && *v.Upgrading) {
+		resp.Diagnostics.AddError("Kubernetes cluster busy", "Scaling requires a ready cluster without an ongoing upgrade; state retained.")
+		return
+	}
+	worker := kubernetesWorkerPool(v)
+	poolID := worker.Id
+	if !current.WorkerCount.Equal(planned.WorkerCount) {
+		poolsActive := true
+		for _, p := range *v.NodePools {
+			poolsActive = poolsActive && p.Status == "active"
+		}
+		if !current.WorkerCount.Equal(previous.WorkerCount) || !poolsActive {
+			resp.Diagnostics.AddError("Kubernetes worker pool changed", "Refresh or wait for the current scaling operation before requesting another count; state retained.")
+			return
+		}
+		result, e := r.client.KubernetesScaleNodePoolWithResponse(ctx, current.ProjectID.ValueString(), current.ID.ValueString(), poolID, tatnet.V1K8sScale{DesiredCount: int(planned.WorkerCount.ValueInt64())})
+		if e != nil {
+			resp.Diagnostics.AddError("Cannot scale Kubernetes cluster", "Scale outcome unknown; refresh before retrying. POST was not retried; cluster identity retained.")
+			return
+		}
+		p := result.JSON200
+		if result.StatusCode() != 200 || p == nil || !strings.EqualFold(p.Id, poolID) || p.Role != "worker" || !strings.EqualFold(p.VmPlanId, worker.VmPlanId) || p.DesiredCount != int(planned.WorkerCount.ValueInt64()) || !types.Int64PointerValue(kubernetesInt64Pointer(p.DiskSizeGb)).Equal(planned.WorkerDiskSizeGB) {
+			resp.Diagnostics.AddError("Cannot confirm Kubernetes scale request", fmt.Sprintf("Scale returned HTTP %d without matching worker pool metadata; refresh before retrying; state retained.", result.StatusCode()))
+			return
+		}
+		// The API acknowledged this desired count. Keep it even if polling fails.
+		current.WorkerCount = planned.WorkerCount
+		resp.Diagnostics.Append(resp.State.Set(ctx, &current)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+	}
+	for {
+		v, err = r.get(ctx, current)
+		observed := current
+		if err == nil {
+			err = observed.observe(v)
+		}
+		if err != nil {
+			resp.Diagnostics.AddError("Cannot reconcile Kubernetes scaling", err.Error()+"; state retained")
+			return
+		}
+		if !kubernetesInputsEqual(planned, observed) || !strings.EqualFold(kubernetesWorkerPool(v).Id, poolID) {
+			resp.Diagnostics.AddError("Kubernetes scaling configuration mismatch", "API returned different inputs or worker pool identity; refresh before retrying; state retained.")
+			return
+		}
+		current = observed
+		resp.Diagnostics.Append(resp.State.Set(ctx, &current)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		poolsReady := true
+		for _, p := range *v.NodePools {
+			if p.Status == "error" {
+				resp.Diagnostics.AddError("Kubernetes scaling failed", "A node pool is in error; state retained.")
+				return
+			}
+			poolsReady = poolsReady && p.Status == "active"
+		}
+		if v.Status == "error" || v.Status == "deleting" || (v.Upgrading != nil && *v.Upgrading) {
+			resp.Diagnostics.AddError("Kubernetes scaling interrupted", "Cluster failed, is deleting or upgrading; state retained.")
+			return
+		}
+		if v.Status == "ready" && poolsReady {
+			ready, e := r.scalingNodesConverged(ctx, current)
+			if e != nil {
+				resp.Diagnostics.AddError("Cannot verify Kubernetes node count", e.Error()+"; state retained")
+				return
+			}
+			if ready {
+				return
+			}
+		}
+		if e := r.pause(ctx); e != nil {
+			resp.Diagnostics.AddError("Kubernetes scaling timeout", "Timed out or cancelled waiting for worker convergence; refresh before retrying; state retained.")
+			return
+		}
+	}
+}
+func kubernetesInt64Pointer(n *int) *int64 {
+	if n == nil {
+		return nil
+	}
+	value := int64(*n)
+	return &value
 }
 func (r *kubernetesClusterResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var m kubernetesClusterModel

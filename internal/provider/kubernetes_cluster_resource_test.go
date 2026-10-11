@@ -275,7 +275,7 @@ func TestKubernetesValidationAndImport(t *testing.T) {
 			}
 		}
 	}
-	for _, field := range []string{"name", "worker_count", "k8s_version", "vpc_id", "unchanged"} {
+	for _, field := range []string{"name", "worker_count", "k8s_version", "vpc_id", "project_id", "region_id", "vm_plan_id", "talos_version", "endpoint_access", "control_plane_count", "worker_disk_size_gb", "unchanged"} {
 		m := kubeState(t, s)
 		switch field {
 		case "name":
@@ -286,6 +286,20 @@ func TestKubernetesValidationAndImport(t *testing.T) {
 			m.K8sVersion = types.StringValue("1.35.0")
 		case "vpc_id":
 			m.VPCID = types.StringValue(kubeRegion)
+		case "project_id":
+			m.ProjectID = types.StringValue(kubeRegion)
+		case "region_id":
+			m.RegionID = types.StringValue(kubeProject)
+		case "vm_plan_id":
+			m.VMPlanID = types.StringValue(kubeRegion)
+		case "talos_version":
+			m.TalosVersion = types.StringValue("v1.13.5")
+		case "endpoint_access":
+			m.EndpointAccess = types.StringValue("public")
+		case "control_plane_count":
+			m.ControlPlaneCount = types.Int64Value(3)
+		case "worker_disk_size_gb":
+			m.WorkerDiskSizeGB = types.Int64Value(40)
 		}
 		p2 := p
 		if d := p2.Set(ctx, &m); d.HasError() {
@@ -303,7 +317,7 @@ func TestKubernetesValidationAndImport(t *testing.T) {
 				t.Fatal(d.Detail)
 			}
 		}
-		if (len(res.RequiresReplace) > 0) != (field != "unchanged") {
+		if (len(res.RequiresReplace) > 0) != (field != "unchanged" && field != "worker_count") {
 			t.Fatal("replacement policy", field, res.RequiresReplace)
 		}
 	}
@@ -377,11 +391,6 @@ func TestKubernetesImportReadAndLocalGuards(t *testing.T) {
 	target.Create(ctx, resource.CreateRequest{Plan: p}, &created)
 	if !created.Diagnostics.HasError() {
 		t.Fatal("missing client accepted")
-	}
-	update := resource.UpdateResponse{}
-	r.Update(ctx, resource.UpdateRequest{}, &update)
-	if !update.Diagnostics.HasError() {
-		t.Fatal("unexpected in-place update")
 	}
 }
 
