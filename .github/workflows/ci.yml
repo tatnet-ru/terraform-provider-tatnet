@@ -64,3 +64,5 @@ jobs:
           terraform -chdir=examples/dns-read validate -no-color
           terraform -chdir=examples/dns-record validate -no-color
           terraform -chdir=examples/dns-rrset validate -no-color
+          terraform -chdir=examples/kubernetes-read validate -no-color
+          terraform -chdir=examples/kubernetes validate -no-color
