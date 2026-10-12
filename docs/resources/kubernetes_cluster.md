@@ -13,7 +13,7 @@ worker scaling, and sufficient account funds.
 Cluster creation can allocate billable nodes and a public API endpoint, depending
 on endpoint mode. Terraform plan does not verify funds or VM-plan availability.
 
-In the next release, **`worker_count` changes scale the existing worker pool in
+Since version 0.7.0, **`worker_count` changes scale the existing worker pool in
 place**. All other input changes replace the entire cluster, including
 `control_plane_count`, versions, VM plan and disk override. Version 0.6.0 still
 replaces the cluster on worker-count changes. Rolling upgrades are not implemented. For persistent workloads
@@ -77,7 +77,7 @@ Only HTTP 404 removes state; HTTP 403/500 or malformed responses retain it.
 External changes are reflected in state when representable; heterogeneous VM plans
 or additional pools require manual reconciliation rather than silently guessing inputs.
 
-### Worker scaling (next release)
+### Worker scaling (since 0.7.0)
 
 Changing only `worker_count` (0–50) sends one POST to the existing worker pool's
 scale endpoint; it never creates or deletes the cluster. Increasing the count
@@ -120,3 +120,19 @@ terraform import tatnet_kubernetes_cluster.example PROJECT_UUID/CLUSTER_UUID
 Import does not provision or reconfigure the cluster. Read reconstructs inputs
 from the cluster and its pools; only the supported simple topology can be represented.
 Write matching configuration and inspect plan before applying.
+
+## Live acceptance
+
+Version 0.7.0 worker scaling was tested on a dedicated Kubernetes 1.34.9 /
+Talos v1.13.5 cluster with a single control plane and a worker cycle of 1 → 2 → 1.
+Both Terraform plans contained only an in-place update. Cluster identity and
+endpoint stayed unchanged, and each apply was followed by a no-op plan.
+
+Scale-up retained the running workload Pod and its PVC. A single-replica
+Deployment was then placed on the newly added worker with preferred node affinity.
+Scale-down moved it back to the original worker; the same PVC/volume and both
+synced files were preserved, with one active attachment. All remaining nodes
+were Kubernetes Ready. The removed worker VM/root disks and billing subscription
+were independently verified as deleted. Zero-worker scaling is unit-tested;
+it was not exercised in this live workload test. Abrupt node failure and
+PodDisruptionBudget-blocked drains were not tested.
