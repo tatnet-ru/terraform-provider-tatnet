@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Upgrade `talos_version` in place through a target-only request, with Kubernetes/Talos/scaling in separate applies.
+- Check the actual observed OS floor and target before completion; prevent silent downgrade from stale pins, missing observations or skipped minors.
+- Share guarded version Update without automatic mutation retries; cover OS upgrade/recovery/failure behavior and existing Kubernetes/scaling regressions.
+
 ## 0.8.0 — 2026-10-12
 
 - Upgrade `tatnet_kubernetes_cluster.k8s_version` in place using the project-scoped API. Talos and other immutable inputs still require replacement.
