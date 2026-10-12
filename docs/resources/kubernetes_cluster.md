@@ -16,8 +16,8 @@ on endpoint mode. Terraform plan does not verify funds or VM-plan availability.
 Since version 0.7.0, **`worker_count` changes scale the existing worker pool in
 place**. Since version 0.8.0, `k8s_version` also upgrades in place. All remaining input
 changes replace the entire cluster, including `control_plane_count`,
-`talos_version`, VM plan and disk override. Version 0.6.0 still
-replaces the cluster on worker-count changes. Kubernetes upgrades are supported since 0.8.0; Talos upgrades remain unsupported. For persistent workloads
+VM plan and disk override. Talos also upgrades in place since 0.9.0. Version 0.6.0 still
+replaces the cluster on worker-count changes. Kubernetes upgrades are supported since 0.8.0; Talos upgrades are supported since 0.9.0. For persistent workloads
 use `lifecycle { prevent_destroy = true }`, and inspect every plan. Cluster deletion
 is not a backup or a migration strategy for workload data/PVs.
 
@@ -167,3 +167,28 @@ cluster endpoint, node/VM identities, Talos OS, PVC/volume and both synced files
 were preserved. Terraform planned only Update and the following plan was no-op.
 This used one control plane and two workers; it does not prove HA availability
 through an upgrade. Patch-only upgrades are unit-tested, not live-tested here.
+
+## Talos OS upgrade (since 0.9.0)
+
+Change only `talos_version` to a newer full `vMAJOR.MINOR.PATCH` image offered
+in the region. Nodes reboot one at a time. Plan rejects downgrade, skipped
+minors, missing v-prefix, and combined Kubernetes/Talos/scaling changes.
+Update checks the actual observed OS floor in `node_talos_version` as well as
+the stored pin before sending one POST with only the Talos target. An absent,
+malformed or newer OS observation cannot silently downgrade a node.
+
+The shared version Update preserves Kubernetes version, topology, cluster
+and pool identities, waits for explicit `upgrading=false`, ready/active pools,
+exact node count and the observed OS target. Errors retain identity and the
+acknowledged pin; ambiguous mutations are not retried. Resume with the same
+API target waits without another POST. API observations are not a direct
+availability/Pod/CSI test; check real OS versions, boot IDs, Node Ready and
+PVC data independently. A single control plane can interrupt the API during
+its reboot. `prevent_destroy` does not prevent reboots or workload disruption.
+
+Live v1.13.4→v1.13.5 acceptance verified actual Talos OS on all three nodes
+and a changed boot ID on each. Nodes and Deployment returned Ready; Kubernetes
+1.34.9, cluster/endpoint/VM identities, PVC/volume and both synced files remained
+unchanged. Terraform planned only Talos Update and the next plan was no-op.
+This used one control plane and two workers; it does not prove continuous HA
+availability through OS reboots. Talos next-minor upgrades are unit-tested only.

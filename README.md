@@ -242,9 +242,20 @@ PVC и данных. Deployment перенёс Pod с удаляемого worke
 С версии 0.8.0 изменение k8s_version обновляет кластер на месте:
 новый patch или следующий minor, без downgrade. Upgrade и worker scaling
 выполняются отдельными apply. Провайдер ждёт upgrading=false и конвергенцию
-узлов; Talos пока требует замены. См. ограничения и обработку ошибок в
+узлов; Talos upgrade доступен с 0.9.0. См. ограничения и обработку ошибок в
 [документации Kubernetes](docs/resources/kubernetes_cluster.md).
 
 Живой upgrade 1.33.13 → 1.34.9 проверил реальные версии API server и трёх
 kubelet, Ready узлы/Deployment, сохранение endpoint, VM ID, Talos, PVC и
 двух файлов. Plan содержал только Update; следующий plan — без изменений.
+
+С версии 0.9.0 talos_version обновляется на месте до нового регионального
+vMAJOR.MINOR.PATCH. Узлы перезагружаются по очереди. Kubernetes, Talos и
+worker_count меняются отдельными apply; провайдер проверяет наблюдаемую
+версию ОС и ждёт завершения. Сохранение desired pin само по себе не
+доказывает завершение перезагрузки.
+
+Живой Talos v1.13.4 → v1.13.5 upgrade проверил ОС и изменившийся boot ID
+на всех трёх узлах. Kubernetes 1.34.9, endpoint, VM ID, PVC и оба файла
+сохранились; узлы и Deployment Ready. Plan содержал только Update,
+после apply — no-op. HA доступность одним control plane не доказана.
