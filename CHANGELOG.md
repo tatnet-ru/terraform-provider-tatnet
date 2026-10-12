@@ -1,10 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.9.0 — 2026-10-12
 
 - Upgrade `talos_version` in place through a target-only request, with Kubernetes/Talos/scaling in separate applies.
 - Check the actual observed OS floor and target before completion; prevent silent downgrade from stale pins, missing observations or skipped minors.
 - Share guarded version Update without automatic mutation retries; cover OS upgrade/recovery/failure behavior and existing Kubernetes/scaling regressions.
+
+Live Talos v1.13.4→v1.13.5 upgrade verified all three actual OS versions and changed boot IDs, Ready nodes/Deployment, unchanged Kubernetes 1.34.9 and cluster/endpoint/VM/PVC identity, with both synced files intact. HA continuity and next-minor Talos live upgrades were not tested.
 
 ## 0.8.0 — 2026-10-12
 
