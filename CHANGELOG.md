@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0 — 2026-10-12
+
+- Upgrade `tatnet_kubernetes_cluster.k8s_version` in place using the project-scoped API. Talos and other immutable inputs still require replacement.
+- Reject downgrades, skipped minors and combined upgrade/scaling plans; wait for explicit upgrade completion, stable pool identity and node counts.
+- Retain acknowledged intent and identity on failures without retrying ambiguous POSTs. Cover upgrade/recovery/failure behavior and Protocol 6 planning guards.
+
+Live 1.33.13→1.34.9 upgrade verified API server and all three kubelets at the target version, Ready nodes/Deployment, and stable cluster/endpoint/VM/Talos/PVC identity with both synced files preserved. Patch-only upgrade paths remain unit-tested.
+
 ## 0.7.0 — 2026-10-12
 
 - Scale `tatnet_kubernetes_cluster.worker_count` in place, including zero workers; other input changes still require replacement.

@@ -56,13 +56,14 @@ func (*kubernetesClusterResource) Metadata(_ context.Context, req resource.Metad
 func (*kubernetesClusterResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	replace := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 	attrs := map[string]schema.Attribute{}
-	for _, name := range []string{"project_id", "region_id", "name", "vm_plan_id", "k8s_version", "talos_version", "endpoint_access"} {
+	for _, name := range []string{"project_id", "region_id", "name", "vm_plan_id", "talos_version", "endpoint_access"} {
 		attrs[name] = schema.StringAttribute{Required: true, PlanModifiers: replace, Description: "Explicit creation input. Changes replace the entire cluster."}
 	}
 	attrs["vpc_id"] = schema.StringAttribute{Optional: true, PlanModifiers: replace, Description: "Existing VPC UUID; requires endpoint_access=private. Changes replace the cluster."}
 	for _, name := range []string{"control_plane_count"} {
 		attrs[name] = schema.Int64Attribute{Required: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Control-plane node count. Changes replace the cluster."}
 	}
+	attrs["k8s_version"] = schema.StringAttribute{Required: true, Description: "Explicit Kubernetes version. Changes upgrade in place to a newer supported patch or next minor; downgrades and skipped minors are rejected."}
 	attrs["worker_count"] = schema.Int64Attribute{Required: true, Description: "Worker count, 0–50. Changes scale the worker pool in place; scale-down drains and removes nodes."}
 	attrs["worker_disk_size_gb"] = schema.Int64Attribute{Optional: true, PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}, Description: "Worker disk override, 10–4000 GB. Omit to use the plan default. Changes replace the cluster."}
 	attrs["id"] = schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}}
@@ -70,7 +71,7 @@ func (*kubernetesClusterResource) Schema(_ context.Context, _ resource.SchemaReq
 		attrs[name] = schema.StringAttribute{Computed: true}
 	}
 	attrs["endpoint_port"] = schema.Int64Attribute{Computed: true}
-	resp.Schema = schema.Schema{Description: "Manage a paid Kubernetes cluster with one control-plane pool and one worker pool using the same VM plan. Worker count changes scale in place; other input changes replace the entire cluster. Use lifecycle.prevent_destroy for persistent workloads. Create/update/delete wait up to 45 minutes; interrupted operations retain identity. No kubeconfig is fetched.", Attributes: attrs}
+	resp.Schema = schema.Schema{Description: "Manage a paid Kubernetes cluster with one control-plane pool and one worker pool using the same VM plan. Worker count changes scale in place and Kubernetes versions upgrade in place; other input changes replace the entire cluster. Use lifecycle.prevent_destroy for persistent workloads. Create/update/delete wait up to 45 minutes; interrupted operations retain identity. No kubeconfig is fetched.", Attributes: attrs}
 }
 func validateKubernetesConfig(m kubernetesClusterModel, known bool) error {
 	for name, v := range map[string]types.String{"project_id": m.ProjectID, "region_id": m.RegionID, "vm_plan_id": m.VMPlanID, "vpc_id": m.VPCID} {
@@ -434,7 +435,7 @@ func (r *kubernetesClusterResource) scalingNodesConverged(ctx context.Context, m
 	}
 	return !pending && counts["controlplane"] == int(m.ControlPlaneCount.ValueInt64()) && counts["worker"] == int(m.WorkerCount.ValueInt64()), nil
 }
-func (r *kubernetesClusterResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *kubernetesClusterResource) updateWorkers(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	resp.State = req.State
 	var planned, previous kubernetesClusterModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planned)...)
