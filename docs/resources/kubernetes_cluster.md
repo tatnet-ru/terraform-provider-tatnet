@@ -14,10 +14,10 @@ Cluster creation can allocate billable nodes and a public API endpoint, dependin
 on endpoint mode. Terraform plan does not verify funds or VM-plan availability.
 
 Since version 0.7.0, **`worker_count` changes scale the existing worker pool in
-place**. In the next release, `k8s_version` also upgrades in place. All remaining input
+place**. Since version 0.8.0, `k8s_version` also upgrades in place. All remaining input
 changes replace the entire cluster, including `control_plane_count`,
 `talos_version`, VM plan and disk override. Version 0.6.0 still
-replaces the cluster on worker-count changes. Kubernetes upgrade is added in the next release; Talos upgrades remain unsupported. For persistent workloads
+replaces the cluster on worker-count changes. Kubernetes upgrades are supported since 0.8.0; Talos upgrades remain unsupported. For persistent workloads
 use `lifecycle { prevent_destroy = true }`, and inspect every plan. Cluster deletion
 is not a backup or a migration strategy for workload data/PVs.
 
@@ -138,7 +138,7 @@ were independently verified as deleted. Zero-worker scaling is unit-tested;
 it was not exercised in this live workload test. Abrupt node failure and
 PodDisruptionBudget-blocked drains were not tested.
 
-## Kubernetes version upgrade (next release)
+## Kubernetes version upgrade (since 0.8.0)
 
 Change only `k8s_version` to a newer supported patch or the next minor of the
 same major. Plan rejects downgrades, skipped minor versions and a simultaneous
@@ -160,3 +160,10 @@ actual Kubernetes node versions, Ready, Deployment and PVC data independently.
 The provider never downloads kubeconfig or controller keys. Upgrade and worker
 scaling must be separate applies. Upgrade waits up to 45 minutes; workload
 availability depends on topology and disruption handling.
+
+Live 1.33.13→1.34.9 acceptance verified the API server and all three kubelets at
+the target version with Kubernetes Ready nodes and a Ready Deployment. The
+cluster endpoint, node/VM identities, Talos OS, PVC/volume and both synced files
+were preserved. Terraform planned only Update and the following plan was no-op.
+This used one control plane and two workers; it does not prove HA availability
+through an upgrade. Patch-only upgrades are unit-tested, not live-tested here.
