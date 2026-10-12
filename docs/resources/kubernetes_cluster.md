@@ -14,9 +14,10 @@ Cluster creation can allocate billable nodes and a public API endpoint, dependin
 on endpoint mode. Terraform plan does not verify funds or VM-plan availability.
 
 Since version 0.7.0, **`worker_count` changes scale the existing worker pool in
-place**. All other input changes replace the entire cluster, including
-`control_plane_count`, versions, VM plan and disk override. Version 0.6.0 still
-replaces the cluster on worker-count changes. Rolling upgrades are not implemented. For persistent workloads
+place**. In the next release, `k8s_version` also upgrades in place. All remaining input
+changes replace the entire cluster, including `control_plane_count`,
+`talos_version`, VM plan and disk override. Version 0.6.0 still
+replaces the cluster on worker-count changes. Kubernetes upgrade is added in the next release; Talos upgrades remain unsupported. For persistent workloads
 use `lifecycle { prevent_destroy = true }`, and inspect every plan. Cluster deletion
 is not a backup or a migration strategy for workload data/PVs.
 
@@ -136,3 +137,26 @@ were Kubernetes Ready. The removed worker VM/root disks and billing subscription
 were independently verified as deleted. Zero-worker scaling is unit-tested;
 it was not exercised in this live workload test. Abrupt node failure and
 PodDisruptionBudget-blocked drains were not tested.
+
+## Kubernetes version upgrade (next release)
+
+Change only `k8s_version` to a newer supported patch or the next minor of the
+same major. Plan rejects downgrades, skipped minor versions and a simultaneous
+`worker_count` change. Other immutable inputs can still cause cluster replacement;
+use `prevent_destroy` and inspect the plan. The API checks target availability.
+
+Update requires a ready cluster, active pools, the existing node count and
+explicit `upgrading` metadata. It issues one project-scoped POST with only the
+Kubernetes target, preserving Talos and worker count. It validates unchanged
+inputs and both pool identities, then waits for `upgrading=false`, ready/active
+status and exact node counts. A retry with the same API target waits without
+another POST. A different ongoing target or missing progress metadata is rejected.
+
+Errors retain cluster identity and the acknowledged target. Neither an ambiguous
+POST nor a polling failure causes another mutation. Refresh reads desired version;
+a no-op plan alone cannot prove that an interrupted upgrade completed. Completion
+uses API observations, not direct kubelet/Pod inspection. A live test must check
+actual Kubernetes node versions, Ready, Deployment and PVC data independently.
+The provider never downloads kubeconfig or controller keys. Upgrade and worker
+scaling must be separate applies. Upgrade waits up to 45 minutes; workload
+availability depends on topology and disruption handling.

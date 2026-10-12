@@ -317,7 +317,7 @@ func TestKubernetesValidationAndImport(t *testing.T) {
 				t.Fatal(d.Detail)
 			}
 		}
-		if (len(res.RequiresReplace) > 0) != (field != "unchanged" && field != "worker_count") {
+		if (len(res.RequiresReplace) > 0) != (field != "unchanged" && field != "worker_count" && field != "k8s_version") {
 			t.Fatal("replacement policy", field, res.RequiresReplace)
 		}
 	}

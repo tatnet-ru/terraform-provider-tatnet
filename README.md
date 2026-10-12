@@ -238,3 +238,9 @@ ready/active pools, Delete ждёт HTTP 404; ошибки сохраняют st
 PVC и данных. Deployment перенёс Pod с удаляемого worker; VM/диски и его
 подписка биллинга были проверены отдельно. После каждого apply plan был без
 изменений. Ноль worker покрыт тестами провайдера, а не живой нагрузкой.
+
+В следующем релизе изменение k8s_version обновляет кластер на месте:
+новый patch или следующий minor, без downgrade. Upgrade и worker scaling
+выполняются отдельными apply. Провайдер ждёт upgrading=false и конвергенцию
+узлов; Talos пока требует замены. См. ограничения и обработку ошибок в
+[документации Kubernetes](docs/resources/kubernetes_cluster.md).
