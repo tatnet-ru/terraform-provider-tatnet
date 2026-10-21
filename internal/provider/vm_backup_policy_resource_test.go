@@ -41,6 +41,8 @@ func TestBackupPolicyLifecycle(t *testing.T) {
 			if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 				t.Error(err)
 			}
+			// Match API request defaults: PUT is a complete policy update.
+			hour, days = 0, 7
 			if body.Enabled != nil {
 				enabled = *body.Enabled
 			}
@@ -91,12 +93,13 @@ func TestBackupPolicyLifecycle(t *testing.T) {
 	if observed.HourUTC.ValueInt64() != 9 || observed.StorageBytes.ValueInt64() != 123 {
 		t.Fatal("drift/usage not refreshed")
 	}
+	hour = 11 // A newer external edit after the last Terraform refresh.
 	deletion := resource.DeleteResponse{State: read.State}
 	r.Delete(ctx, resource.DeleteRequest{State: read.State}, &deletion)
 	if deletion.Diagnostics.HasError() {
 		t.Fatal(deletion.Diagnostics)
 	}
-	if enabled || hour != 9 || days != 30 || requests != 4 {
+	if enabled || hour != 11 || days != 30 || requests != 5 {
 		t.Fatal("destroy changed more than enabled")
 	}
 }

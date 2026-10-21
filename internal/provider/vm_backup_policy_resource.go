@@ -178,9 +178,27 @@ func (r *vmBackupPolicyResource) Delete(ctx context.Context, req resource.Delete
 		resp.Diagnostics.AddError("Provider not configured", "Configure TatNet before disabling a policy.")
 		return
 	}
-	// Only disable. Preserve any schedule/retention edited outside Terraform.
-	disabled := false
-	result, err := r.client.VmsSetBackupPolicyWithResponse(ctx, m.ProjectID.ValueString(), m.VMID.ValueString(), tatnet.VMBackupPolicyRequest{Enabled: &disabled})
+	// PUT applies defaults to omitted fields. Read the current policy before
+	// disabling so external schedule/retention edits are preserved.
+	current, err := r.client.VmsGetBackupPolicyWithResponse(ctx, m.ProjectID.ValueString(), m.VMID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Cannot disable backup policy", "Policy read request failed; state retained.")
+		return
+	}
+	if current.StatusCode() == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	if current.StatusCode() != 200 || current.JSON200 == nil {
+		resp.Diagnostics.AddError("Cannot disable backup policy", fmt.Sprintf("Policy read returned HTTP %d; state retained.", current.StatusCode()))
+		return
+	}
+	if err = m.observe(current.JSON200); err != nil {
+		resp.Diagnostics.AddError("Cannot disable backup policy", err.Error())
+		return
+	}
+	disabled, hour, days := false, int(m.HourUTC.ValueInt64()), int(m.RetentionDays.ValueInt64())
+	result, err := r.client.VmsSetBackupPolicyWithResponse(ctx, m.ProjectID.ValueString(), m.VMID.ValueString(), tatnet.VMBackupPolicyRequest{Enabled: &disabled, HourUtc: &hour, RetentionDays: &days})
 	if err != nil {
 		resp.Diagnostics.AddError("Cannot disable backup policy", "Policy write request failed; state retained.")
 		return

@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.10.0 — 2026-10-21
+## 0.10.1 — 2026-10-21
 
 - Add independent `tatnet_vm_backup_policy` with daily UTC schedule, retention, drift refresh, import and storage usage/rate.
-- Destroy disables future captures while preserving recovery points. Existing backups must be explicitly removed before VM deletion.
+- Destroy reads the current full policy before disabling captures, preserving external schedule/retention edits and recovery points. Existing backups must be explicitly removed before VM deletion.
 - Pin SDK v0.14.0.
 
 
