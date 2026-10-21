@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml/badge.svg)](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml)
 
-Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.10.0`.
+Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.15.0`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.6.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+Версия 0.10.2 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
 и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway` и DNS data sources/resources и Kubernetes.
 
 ## Установка из Registry
@@ -14,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.6.0"
+      version = "0.10.2"
     }
   }
 }

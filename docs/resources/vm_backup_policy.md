@@ -18,12 +18,18 @@ Required: `project_id`, `vm_id` (UUIDs), `enabled`, `hour_utc` (0–23 UTC),
 other changes update it in place. Computed: `id` (`project_id/vm_id`),
 `next_run_at`, `storage_bytes`, `price_per_gb_hour`.
 
-Storage is billed by actual compressed decimal GB-hours, including manual
-copies. Retention changes apply to future automatic copies. Manual copies do
+Storage costs 6 RUB per decimal GB-month (730 hours), billed by actual
+compressed GB-hours, including manual copies. It is separate from the VM
+subscription and needs no prepaid slots. Retention changes apply to future automatic copies. Manual copies do
 not expire, and the last good automatic copy is preserved until a newer one
 exists. Disabling or destroying this resource stops future captures; it does
 not delete existing copies or stop charging for their storage. Delete copies
 explicitly before destroying the VM. VM deletion fails while backups remain.
+
+New copies have no mandatory 30-day deletion lock. Previously protected copies
+remain locked until their deadline; legacy incremental ancestors cannot be
+deleted while required by other points. New captures are independent full
+compressed points. See the [user guide](https://docs.tatnet.ru/docs/infrastructure/vm-backups).
 
 Import an existing policy (including a currently disabled policy):
 
