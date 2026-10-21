@@ -6,7 +6,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
-	github.com/tatnet-ru/tatnet-go v0.14.0
+	github.com/tatnet-ru/tatnet-go v0.15.0
 )
 
 require (
