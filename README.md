@@ -259,3 +259,5 @@ worker_count меняются отдельными apply; провайдер п�
 на всех трёх узлах. Kubernetes 1.34.9, endpoint, VM ID, PVC и оба файла
 сохранились; узлы и Deployment Ready. Plan содержал только Update,
 после apply — no-op. HA доступность одним control plane не доказана.
+
+VM automatic backups: [tatnet_vm_backup_policy](docs/resources/vm_backup_policy.md) manages daily UTC schedules and retention; storage is billed by actual usage. Destroy disables the policy and preserves existing copies.
