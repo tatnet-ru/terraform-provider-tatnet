@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 — 2026-10-21
+
+- Add independent `tatnet_vm_backup_policy` with daily UTC schedule, retention, drift refresh, import and storage usage/rate.
+- Destroy disables future captures while preserving recovery points. Existing backups must be explicitly removed before VM deletion.
+- Pin SDK v0.14.0.
+
+
 ## 0.9.0 — 2026-10-12
 
 - Upgrade `talos_version` in place through a target-only request, with Kubernetes/Talos/scaling in separate applies.

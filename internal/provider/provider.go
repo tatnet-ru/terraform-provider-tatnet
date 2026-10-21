@@ -73,7 +73,7 @@ func (*Provider) Configure(ctx context.Context, req provider.ConfigureRequest, r
 	resp.ResourceData = client
 }
 func (*Provider) Resources(context.Context) []func() resource.Resource {
-	return []func() resource.Resource{NewVMResource, NewFloatingIPResource, NewVPCResource, NewNATGatewayResource, NewDNSRecordResource, NewDNSRRsetResource, NewKubernetesClusterResource}
+	return []func() resource.Resource{NewVMResource, NewVMBackupPolicyResource, NewFloatingIPResource, NewVPCResource, NewNATGatewayResource, NewDNSRecordResource, NewDNSRRsetResource, NewKubernetesClusterResource}
 }
 func (*Provider) DataSources(context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{NewImageDataSource, NewVPCDataSource, NewDNSZoneDataSource, NewDNSRecordDataSource, NewKubernetesRegionDataSource}

@@ -51,6 +51,9 @@ func TestProtocolSchema(t *testing.T) {
 	if response.ResourceSchemas["tatnet_floating_ip"] == nil {
 		t.Fatal("floating IP resource not registered")
 	}
+	if response.ResourceSchemas["tatnet_vm_backup_policy"] == nil {
+		t.Fatal("backup policy resource not registered")
+	}
 	if response.ResourceSchemas["tatnet_vm"] == nil {
 		t.Fatal("VM resource not registered")
 	}
