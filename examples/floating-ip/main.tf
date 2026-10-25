@@ -33,17 +33,17 @@ data "tatnet_image" "debian" {
 }
 
 resource "tatnet_vm" "example" {
-  project_id   = var.project_id
-  cluster_id   = var.cluster_id
-  vm_plan_id   = var.vm_plan_id
-  image_id     = data.tatnet_image.debian.id
-  vpc_id       = var.vpc_id
-  name         = "terraform-example"
-  hostname     = "terraform-example"
-  default_user = "debian"
-  ssh_key_ids  = var.ssh_key_ids
+  project_id    = var.project_id
+  cluster_id    = var.cluster_id
+  vm_plan_id    = var.vm_plan_id
+  image_id      = data.tatnet_image.debian.id
+  vpc_id        = var.vpc_id
+  name          = "terraform-example"
+  hostname      = "terraform-example"
+  default_user  = "debian"
+  ssh_key_ids   = var.ssh_key_ids
   period_months = 1
-  auto_renew   = false
+  auto_renew    = false
 }
 
 output "vm_id" {
