@@ -3,14 +3,13 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -23,21 +22,26 @@ type vmResource struct {
 	pollInterval, operationTimeout time.Duration
 }
 type vmModel struct {
-	ID          types.String `tfsdk:"id"`
-	InterfaceID types.String `tfsdk:"primary_interface_id"`
-	ProjectID   types.String `tfsdk:"project_id"`
-	ClusterID   types.String `tfsdk:"cluster_id"`
-	ImageID     types.String `tfsdk:"image_id"`
-	PlanID      types.String `tfsdk:"vm_plan_id"`
-	Name        types.String `tfsdk:"name"`
-	Hostname    types.String `tfsdk:"hostname"`
-	DefaultUser types.String `tfsdk:"default_user"`
-	VPCID       types.String `tfsdk:"vpc_id"`
-	SSHKeys     types.Set    `tfsdk:"ssh_key_ids"`
-	PeriodDays  types.Int64  `tfsdk:"period_days"`
-	AutoRenew   types.Bool   `tfsdk:"auto_renew"`
-	Status      types.String `tfsdk:"status"`
-	IPv4        types.List   `tfsdk:"ipv4_addresses"`
+	ID                 types.String `tfsdk:"id"`
+	InterfaceID        types.String `tfsdk:"primary_interface_id"`
+	ProjectID          types.String `tfsdk:"project_id"`
+	ClusterID          types.String `tfsdk:"cluster_id"`
+	ImageID            types.String `tfsdk:"image_id"`
+	PlanID             types.String `tfsdk:"vm_plan_id"`
+	Name               types.String `tfsdk:"name"`
+	Hostname           types.String `tfsdk:"hostname"`
+	DefaultUser        types.String `tfsdk:"default_user"`
+	VPCID              types.String `tfsdk:"vpc_id"`
+	SSHKeys            types.Set    `tfsdk:"ssh_key_ids"`
+	PeriodDays         types.Int64  `tfsdk:"period_days"`
+	PeriodMonths       types.Int64  `tfsdk:"period_months"`
+	BillingPeriod      types.String `tfsdk:"billing_period"`
+	SubscriptionPeriod types.String `tfsdk:"subscription_period"`
+	AmountPerPeriod    types.String `tfsdk:"amount_per_period"`
+	Currency           types.String `tfsdk:"currency"`
+	AutoRenew          types.Bool   `tfsdk:"auto_renew"`
+	Status             types.String `tfsdk:"status"`
+	IPv4               types.List   `tfsdk:"ipv4_addresses"`
 }
 
 var _ resource.ResourceWithConfigure = (*vmResource)(nil)
@@ -53,13 +57,18 @@ func (*vmResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *res
 	required := func(description string) schema.StringAttribute {
 		return schema.StringAttribute{Required: true, Description: description, PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()}}
 	}
-	resp.Schema = schema.Schema{Description: "Prepaid VM with one private interface in an existing VPC. Changes to creation parameters replace the VM. Create/delete wait up to 20 minutes.", Attributes: map[string]schema.Attribute{
+	resp.Schema = schema.Schema{Description: "VM with one private interface in an existing VPC. Subscription period and automatic renewal update in place; changes to VM creation parameters replace the VM. Create/delete wait up to 20 minutes.", Attributes: map[string]schema.Attribute{
 		"id":         schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()}},
 		"project_id": required("Project UUID."), "cluster_id": required("Region UUID."), "image_id": required("Accessible image UUID deployed in the region."), "vm_plan_id": required("VM tariff/plan UUID; CPU, memory and disk use plan defaults."),
 		"name": required("VM display name."), "hostname": required("VM hostname."), "default_user": required("SSH login user."), "vpc_id": required("Existing VPC UUID in the target region. No public IP is allocated."),
 		"ssh_key_ids":          schema.SetAttribute{Required: true, ElementType: types.StringType, Description: "At least one existing SSH key UUID.", PlanModifiers: []planmodifier.Set{setplanmodifier.RequiresReplace()}},
-		"period_days":          schema.Int64Attribute{Required: true, Description: "Initial prepaid period in days. Creation charges account funds.", PlanModifiers: []planmodifier.Int64{int64planmodifier.RequiresReplace()}},
-		"auto_renew":           schema.BoolAttribute{Required: true, Description: "Whether the paid subscription renews automatically.", PlanModifiers: []planmodifier.Bool{boolplanmodifier.RequiresReplace()}},
+		"period_days":          schema.Int64Attribute{Optional: true, Description: "Daily subscription: only 1 is supported. Use period_months=1 for a calendar month. Mutually exclusive with period_months and billing_period."},
+		"period_months":        schema.Int64Attribute{Optional: true, Description: "Calendar subscription period: 1, 3, 6, or 12 months. Changes update billing without restarting or replacing the VM."},
+		"billing_period":       schema.StringAttribute{Optional: true, Description: "Subscription interval: 1h, 1d, 1m, 3m, 6m, or 12m. Specify exactly one of billing_period, period_days, period_months."},
+		"subscription_period":  schema.StringAttribute{Computed: true, Description: "Actual subscription interval reported by billing."},
+		"amount_per_period":    schema.StringAttribute{Computed: true, Description: "Server-priced total per subscription period, as a decimal string."},
+		"currency":             schema.StringAttribute{Computed: true, Description: "Subscription currency."},
+		"auto_renew":           schema.BoolAttribute{Required: true, Description: "Automatically renew the subscription. Changes neither charge nor start a stopped VM."},
 		"status":               schema.StringAttribute{Computed: true, Description: "Observed VM lifecycle status; stopped VMs are not started automatically."},
 		"primary_interface_id": schema.StringAttribute{Computed: true, Description: "UUID of the sole interface in the configured VPC, suitable for tatnet_floating_ip.vm_interface_id. Null when missing or ambiguous."},
 		"ipv4_addresses":       schema.ListAttribute{Computed: true, ElementType: types.StringType, Description: "Observed IPv4 addresses."},
@@ -76,8 +85,10 @@ func (*vmResource) ValidateConfig(ctx context.Context, req resource.ValidateConf
 			resp.Diagnostics.AddError("Invalid VM configuration", name+" must not be empty.")
 		}
 	}
-	if !m.PeriodDays.IsNull() && !m.PeriodDays.IsUnknown() && (m.PeriodDays.ValueInt64() < 1 || m.PeriodDays.ValueInt64() > 2147483647) {
-		resp.Diagnostics.AddError("Invalid payment period", "period_days must be a positive 32-bit integer.")
+	if !m.PeriodDays.IsUnknown() && !m.PeriodMonths.IsUnknown() && !m.BillingPeriod.IsUnknown() {
+		if _, err := m.paymentPeriod(); err != nil {
+			resp.Diagnostics.AddError("Invalid payment period", err.Error())
+		}
 	}
 	if !m.SSHKeys.IsNull() && !m.SSHKeys.IsUnknown() {
 		if len(m.SSHKeys.Elements()) == 0 {
@@ -115,14 +126,26 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	days := int(m.PeriodDays.ValueInt64())
+	period, err := m.paymentPeriod()
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid payment period", err.Error())
+		return
+	}
+	var days, months *int
+	if period == "1d" {
+		v := 1
+		days = &v
+	} else if strings.HasSuffix(period, "m") {
+		v, _ := strconv.Atoi(strings.TrimSuffix(period, "m"))
+		months = &v
+	}
 	renew := m.AutoRenew.ValueBool()
 	vpc := m.VPCID.ValueString()
 	no := false
 	yes := true
 	interfaces := []tatnet.V1VMInterface{{Type: "vpc", VpcId: &vpc, FloatingIp: &no, Dhcp4: &yes}}
 	result, err := r.client.VmsCreateVmWithResponse(ctx, m.ProjectID.ValueString(), tatnet.V1VMCreate{
-		Name: m.Name.ValueString(), Hostname: m.Hostname.ValueString(), ClusterId: m.ClusterID.ValueString(), ImageId: m.ImageID.ValueString(), VmPlanId: m.PlanID.ValueString(), DefaultUser: m.DefaultUser.ValueString(), SshKeyIds: &keys, Interfaces: &interfaces, PeriodDays: &days, AutoRenew: &renew,
+		Name: m.Name.ValueString(), Hostname: m.Hostname.ValueString(), ClusterId: m.ClusterID.ValueString(), ImageId: m.ImageID.ValueString(), VmPlanId: m.PlanID.ValueString(), DefaultUser: m.DefaultUser.ValueString(), SshKeyIds: &keys, Interfaces: &interfaces, PeriodDays: days, PeriodMonths: months, AutoRenew: &renew,
 	})
 	// POST has no idempotency contract. Never retry an ambiguous create automatically.
 	if err != nil {
@@ -147,7 +170,13 @@ func (r *vmResource) Create(ctx context.Context, req resource.CreateRequest, res
 	}
 	if err != nil {
 		resp.Diagnostics.AddError("VM did not become ready", err.Error())
+		return
 	}
+	if err := r.readSubscription(ctx, &m); err != nil {
+		resp.Diagnostics.AddError("Cannot read VM subscription", err.Error())
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &m)...)
 }
 func (r *vmResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var m vmModel
@@ -165,10 +194,131 @@ func (r *vmResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		return
 	}
 	m.observe(ctx, vm, &resp.Diagnostics, true)
+	if err := r.readSubscription(ctx, &m); err != nil {
+		resp.Diagnostics.AddError("Cannot read VM subscription", err.Error())
+		return
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &m)...)
 }
-func (*vmResource) Update(_ context.Context, _ resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError("In-place update unsupported", "Changes to VM creation parameters must be planned as replacement.")
+func (r *vmResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var desired, prior vmModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &desired)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &prior)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if !desired.ProjectID.Equal(prior.ProjectID) || !desired.ClusterID.Equal(prior.ClusterID) ||
+		!desired.ImageID.Equal(prior.ImageID) || !desired.PlanID.Equal(prior.PlanID) ||
+		!desired.Name.Equal(prior.Name) || !desired.Hostname.Equal(prior.Hostname) ||
+		!desired.DefaultUser.Equal(prior.DefaultUser) || !desired.VPCID.Equal(prior.VPCID) || !desired.SSHKeys.Equal(prior.SSHKeys) {
+		resp.Diagnostics.AddError("VM replacement required", "Only subscription settings can change in place.")
+		return
+	}
+	period, err := desired.paymentPeriod()
+	if err != nil {
+		resp.Diagnostics.AddError("Invalid payment period", err.Error())
+		return
+	}
+	if r.client == nil {
+		resp.Diagnostics.AddError("Provider not configured", "Configure TatNet before updating a subscription.")
+		return
+	}
+	desired.ID = prior.ID
+	p := tatnet.V1VMSubscriptionUpdatePeriodType(period)
+	renew := desired.AutoRenew.ValueBool()
+	result, err := r.client.VmsPatchVmSubscriptionWithResponse(ctx, desired.ProjectID.ValueString(), desired.ID.ValueString(), tatnet.V1VMSubscriptionUpdate{PeriodType: &p, AutoRenew: &renew})
+	if err != nil {
+		resp.Diagnostics.AddError("VM subscription outcome unknown", "Refresh the subscription before retrying; the VM identity is retained.")
+		return
+	}
+	if result.StatusCode() != 200 || result.JSON200 == nil {
+		resp.Diagnostics.AddError("Cannot update VM subscription", fmt.Sprintf("API returned HTTP %d. Check billing permission, balance and paid period. The VM was not replaced.", result.StatusCode()))
+		return
+	}
+	if result.JSON200.ResourceId != prior.ID.ValueString() || result.JSON200.PeriodType != period || result.JSON200.AutoRenew != renew {
+		resp.Diagnostics.AddError("VM subscription not confirmed", "API returned different subscription settings; refresh before retrying.")
+		return
+	}
+	desired.observeSubscription(result.JSON200)
+	// Subscription updates do not change the VM's observed power/network state.
+	desired.Status, desired.InterfaceID, desired.IPv4 = prior.Status, prior.InterfaceID, prior.IPv4
+	resp.Diagnostics.Append(resp.State.Set(ctx, &desired)...)
+}
+
+func (m *vmModel) paymentPeriod() (string, error) {
+	count := 0
+	period := ""
+	if !m.PeriodDays.IsNull() {
+		count++
+		if m.PeriodDays.IsUnknown() || m.PeriodDays.ValueInt64() != 1 {
+			return "", fmt.Errorf("period_days supports only 1; replace period_days=30 with period_months=1")
+		}
+		period = "1d"
+	}
+	if !m.PeriodMonths.IsNull() {
+		count++
+		if m.PeriodMonths.IsUnknown() {
+			return "", fmt.Errorf("period_months must be known")
+		}
+		period = fmt.Sprintf("%dm", m.PeriodMonths.ValueInt64())
+	}
+	if !m.BillingPeriod.IsNull() {
+		count++
+		if m.BillingPeriod.IsUnknown() {
+			return "", fmt.Errorf("billing_period must be known")
+		}
+		period = m.BillingPeriod.ValueString()
+	}
+	if count != 1 {
+		return "", fmt.Errorf("specify exactly one of billing_period, period_months, period_days")
+	}
+	switch period {
+	case "1h", "1d", "1m", "3m", "6m", "12m":
+		return period, nil
+	}
+	return "", fmt.Errorf("supported periods: 1h, 1d, 1m, 3m, 6m, 12m")
+}
+
+func (r *vmResource) readSubscription(ctx context.Context, m *vmModel) error {
+	result, err := r.client.VmsGetVmSubscriptionWithResponse(ctx, m.ProjectID.ValueString(), m.ID.ValueString())
+	if err != nil {
+		return fmt.Errorf("subscription read failed; VM state retained")
+	}
+	if result.StatusCode() != 200 || result.JSON200 == nil {
+		return fmt.Errorf("subscription read returned HTTP %d; VM state retained", result.StatusCode())
+	}
+	if result.JSON200.ResourceId != m.ID.ValueString() {
+		return fmt.Errorf("subscription belongs to another VM; state retained")
+	}
+	switch result.JSON200.PeriodType {
+	case "1h", "1d", "1m", "3m", "6m", "12m":
+	default:
+		return fmt.Errorf("unsupported subscription interval; state retained")
+	}
+	m.observeSubscription(result.JSON200)
+	return nil
+}
+
+func (m *vmModel) observeSubscription(s *tatnet.V1VMSubscription) {
+	m.SubscriptionPeriod = types.StringValue(s.PeriodType)
+	m.AmountPerPeriod, m.Currency = types.StringValue(s.AmountPerPeriod), types.StringValue(s.Currency)
+	m.AutoRenew = types.BoolValue(s.AutoRenew)
+	if !m.BillingPeriod.IsNull() {
+		m.BillingPeriod = types.StringValue(s.PeriodType)
+	}
+	if !m.PeriodDays.IsNull() {
+		m.PeriodDays = types.Int64Null()
+		if s.PeriodType == "1d" {
+			m.PeriodDays = types.Int64Value(1)
+		}
+	}
+	if !m.PeriodMonths.IsNull() {
+		m.PeriodMonths = types.Int64Null()
+		if strings.HasSuffix(s.PeriodType, "m") {
+			v, _ := strconv.Atoi(strings.TrimSuffix(s.PeriodType, "m"))
+			m.PeriodMonths = types.Int64Value(int64(v))
+		}
+	}
 }
 func (r *vmResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var m vmModel

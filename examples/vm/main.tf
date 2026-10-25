@@ -53,7 +53,7 @@ resource "tatnet_vm" "example" {
   hostname     = "terraform-example"
   default_user = "debian"
   ssh_key_ids  = var.ssh_key_ids
-  period_days  = 1
+  period_months = 1
   auto_renew   = false
 }
 
