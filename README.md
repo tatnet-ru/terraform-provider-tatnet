@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml/badge.svg)](https://github.com/tatnet-ru/terraform-provider-tatnet/actions/workflows/ci.yml)
 
-Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.15.0`.
+Экспериментальный провайдер на Terraform Plugin Framework и `tatnet-go v0.16.2`.
 Опубликован в [Terraform Registry](https://registry.terraform.io/providers/tatnet-ru/tatnet/latest).
-Версия 0.10.2 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
+Версия 0.11.0 поддерживает `tatnet_image`, `tatnet_vm`, `tatnet_floating_ip`
 и `tatnet_vpc` (data source и resource), а также `tatnet_nat_gateway` и DNS data sources/resources и Kubernetes.
 
 ## Установка из Registry
@@ -14,7 +14,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "0.10.2"
+      version = "0.11.0"
     }
   }
 }
@@ -25,6 +25,17 @@ provider "tatnet" {}
 Передайте API-ключ через `TATNET_API_KEY`, затем выполните `terraform init`.
 Релиз подписан ключом `F1A4B97D33F29CC5`. Сохраните `.terraform.lock.hcl`
 в репозитории своей инфраструктуры.
+
+## Период оплаты ВМ — с версии 0.11.0
+
+`period_months = 1` создаёт календарную месячную подписку. Доступны также
+3, 6 и 12 месяцев; `period_days = 1` — сутки. Через `billing_period` можно
+явно выбрать `1h`, `1d`, `1m`, `3m`, `6m`, `12m`. Укажите ровно одно поле.
+
+Период и `auto_renew` меняются на существующей ВМ без пересоздания и
+перезапуска. Для перехода со старого `period_days = 30` замените его на
+`period_months = 1` в том же ресурсе и проверьте план: должно быть изменение
+на месте. [Условия оплаты и миграция](docs/resources/vm.md).
 
 ## Чтение образа
 

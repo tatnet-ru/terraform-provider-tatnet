@@ -49,6 +49,42 @@ func TestVMPaymentPeriods(t *testing.T) {
 	}
 }
 
+func TestVMCreationPeriodTranslation(t *testing.T) {
+	for _, period := range []string{"1h", "1d", "1m", "3m", "6m", "12m"} {
+		t.Run(period, func(t *testing.T) {
+			m := testVMModel(t)
+			m.PeriodDays = types.Int64Null()
+			m.BillingPeriod = types.StringValue(period)
+			days, months, err := m.creationPeriod()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if days != nil && months != nil {
+				t.Fatal("both period fields were sent")
+			}
+			switch period {
+			case "1h":
+				if days != nil || months != nil {
+					t.Fatal("hourly billing has no day/month field")
+				}
+			case "1d":
+				if days == nil || *days != 1 || months != nil {
+					t.Fatal("incorrect daily period")
+				}
+			default:
+				if days != nil || months == nil || fmt.Sprintf("%dm", *months) != period {
+					t.Fatal("calendar months translated to an incorrect interval")
+				}
+			}
+		})
+	}
+	legacy := testVMModel(t)
+	legacy.PeriodDays = types.Int64Value(30)
+	if _, _, err := legacy.creationPeriod(); err == nil {
+		t.Fatal("invalid legacy period reached VM creation")
+	}
+}
+
 func TestVMSubscriptionPlanNeverReplacesVM(t *testing.T) {
 	ctx := context.Background()
 	for _, legacy := range []int64{1, 30} {
