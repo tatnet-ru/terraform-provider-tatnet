@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 — 2026-10-25
+
+- Add calendar VM payment periods (`period_months = 1/3/6/12`) and explicit `billing_period` (`1h`, `1d`, `1m`, `3m`, `6m`, `12m`). Reject unsupported daily values before creating a VM.
+- Update VM subscription intervals and automatic renewal in place. Preserve VM identity, disks and power state; retain state on API errors without retrying mutations.
+- Refresh actual subscription period, price, currency and automatic renewal. Document migration from `period_days = 30` without replacing an existing VM.
+- Pin SDK v0.16.2. Requires the VM subscription API.
+
 ## 0.10.1 — 2026-10-21
 
 - Add independent `tatnet_vm_backup_policy` with daily UTC schedule, retention, drift refresh, import and storage usage/rate.

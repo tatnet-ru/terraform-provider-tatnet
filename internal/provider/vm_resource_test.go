@@ -39,6 +39,10 @@ func vmHarness(t *testing.T, handler http.HandlerFunc) (*vmResource, tfsdk.Plan,
 			t.Errorf("wrong project path: %s", q.URL)
 		}
 		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(q.URL.Path, "/subscription") {
+			_, _ = w.Write([]byte(`{"resource_id":"vm-a","period_type":"1d","amount_per_period":"150.54","currency":"RUB","status":"active","auto_renew":false}`))
+			return
+		}
 		handler(w, q)
 	}))
 	t.Cleanup(server.Close)

@@ -23,7 +23,7 @@ resource "tatnet_vm" "example" {
   hostname     = "terraform-example"
   default_user = "debian"
   ssh_key_ids  = var.ssh_key_ids
-  period_days  = 1
+  period_months = 1
   auto_renew   = false
 }
 ```
@@ -32,7 +32,9 @@ resource "tatnet_vm" "example" {
 
 ### Required
 
-All input changes require replacement, including billing settings and name.
+Changes to VM identity, hardware, image and network inputs require replacement.
+Payment period and automatic renewal update the existing subscription without
+replacing or restarting the VM.
 
 - `project_id` (String) Project UUID.
 - `cluster_id` (String) Region UUID.
@@ -43,8 +45,21 @@ All input changes require replacement, including billing settings and name.
 - `hostname` (String) Hostname accepted by TatNet.
 - `default_user` (String) SSH login user.
 - `ssh_key_ids` (Set of String) At least one existing SSH key UUID.
-- `period_days` (Number) Positive integer initial prepaid period in days.
 - `auto_renew` (Boolean) Enable or disable automatic subscription renewal.
+
+### Payment period
+
+Specify exactly one of:
+
+- `billing_period` (String) `1h`, `1d`, `1m`, `3m`, `6m`, or `12m`.
+- `period_months` (Number) Calendar months: `1`, `3`, `6`, or `12`.
+- `period_days` (Number) Only `1` is supported, for daily billing.
+
+`period_days = 30` is rejected. For a calendar month use `period_months = 1`
+or `billing_period = "1m"`. Rates and multi-month discounts are determined by
+the server. Period changes refund unused prepaid time as bonus credit and
+charge the new period; expired subscriptions must be renewed first. Changing
+`auto_renew` alone does not charge or start a stopped VM.
 
 ### Read-Only
 
@@ -52,6 +67,9 @@ All input changes require replacement, including billing settings and name.
 - `status` (String) Observed VM lifecycle status. Stopped VMs are not automatically started.
 - `primary_interface_id` (String) UUID of the sole interface matching `vpc_id`, for `tatnet_floating_ip.vm_interface_id`. Null if the API reports no matching interface or more than one.
 - `ipv4_addresses` (List of String) Observed IPv4 addresses, potentially in CIDR notation.
+- `subscription_period` (String) Actual billing interval.
+- `amount_per_period` (String) Total price per billing interval as a decimal string.
+- `currency` (String) Currency of that price.
 
 ## Lifecycle and errors
 
@@ -61,7 +79,10 @@ poll every five seconds. An interrupted or failed creation retains the ID
 when the API has returned one; Terraform may mark that instance for replacement.
 HTTP 403 and server errors during refresh retain state.
 
-Read refreshes name, hostname, status and addresses. Other creation inputs
+Read refreshes name, hostname, status, addresses, payment period, price and
+automatic renewal. It requires `vm:read` plus the API key creator's live
+`account:view_billing` permission. Subscription updates require `vm:update`
+plus `account:manage_billing`. Other creation inputs
 remain as configured because the API does not return their complete original
 values. A plan does not validate the plan's availability or account balance.
 
@@ -71,6 +92,27 @@ retrying to avoid an orphan VM.
 
 Replacement deletes the VM and its disk. Consider `lifecycle.prevent_destroy`
 for persistent workloads. Back up data before allowing replacement.
+
+## Migrating existing subscriptions from provider 0.10.2
+
+Deploy the subscription API before upgrading the provider. Replace the old
+period setting in the existing resource; keep its Terraform address and VM
+identity unchanged:
+
+```terraform
+# Remove: period_days = 30
+period_months = 1
+```
+
+The new provider plans an in-place subscription update, including when the
+old state contains `period_days = 30`. Check `terraform plan` for `~ update
+in-place`, with no VM replacement. Version 0.10.2 itself cannot perform this
+migration safely because its billing fields require replacement.
+
+Reads retain the VM in state when billing is unavailable or access is denied.
+Failed subscription updates do not retry automatically. Refresh before
+retrying an uncertain update; repeating the same desired settings does not
+charge another period. Changes to hardware or image still require replacement.
 
 ## Import
 
