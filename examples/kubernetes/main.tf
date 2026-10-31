@@ -2,7 +2,7 @@ terraform {
   required_providers {
     tatnet = {
       source  = "tatnet-ru/tatnet"
-      version = "~> 0.6.0"
+      version = "~> 0.11.0"
     }
   }
 }
