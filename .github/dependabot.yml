@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "terraform"
+    directories:
+      - "/examples/dns-read"
+      - "/examples/dns-record"
+      - "/examples/dns-rrset"
+      - "/examples/floating-ip"
+      - "/examples/image"
+      - "/examples/kubernetes"
+      - "/examples/kubernetes-read"
+      - "/examples/nat-gateway"
+      - "/examples/vm"
+      - "/examples/vpc"
+      - "/examples/vpc-managed"
+    schedule:
+      interval: "weekly"
