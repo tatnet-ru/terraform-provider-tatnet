@@ -66,3 +66,8 @@ jobs:
           terraform -chdir=examples/dns-rrset validate -no-color
           terraform -chdir=examples/kubernetes-read validate -no-color
           terraform -chdir=examples/kubernetes validate -no-color
+
+      - name: Check reachable Go vulnerabilities
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          "$(go env GOPATH)/bin/govulncheck" ./...
